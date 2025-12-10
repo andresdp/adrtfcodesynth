@@ -1,0 +1,60 @@
+# ADR: Use of AWS Lambda for Serverless Functions
+
+## Title
+Use of AWS Lambda for Serverless Functions
+
+## Status
+Accepted
+
+## Motivation
+The existing architecture relies heavily on a monolithic deployment, which limits scalability and flexibility. AWS Lambda offers a serverless computing model that can enhance scalability and reduce operational overhead by allowing functions to be executed in response to events. This decision aims to leverage serverless functions for specific tasks, improving scalability and reducing costs.
+
+## Decision Drivers
+- Need for improved scalability and cost-efficiency
+- Requirement for reduced operational overhead
+- Desire to adopt modern serverless computing practices
+
+## Main Decision
+The decision is to utilize AWS Lambda for specific serverless functions within the application. These functions will handle tasks that benefit from event-driven execution, such as processing asynchronous events, handling background jobs, and integrating with third-party services. This approach will enhance scalability and reduce the need for managing server infrastructure.
+
+## Alternatives
+- **Traditional Server-Based Execution**: Continue using EC2 instances for all processing tasks.
+- **Container-Based Execution**: Use containers to manage and scale specific tasks.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Automatically scales with demand, reducing operational overhead.
+    - Cost-efficient as billing is based on actual usage.
+    - Simplifies infrastructure management by eliminating server maintenance.
+- Traditional Server-Based Execution:
+  - Pros:
+    - Provides full control over server environment and resources.
+    - Easier to implement with existing infrastructure.
+- Container-Based Execution:
+  - Pros:
+    - Offers flexibility in managing and scaling tasks.
+    - Provides isolation and resource control for specific tasks.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Limited execution time and resource constraints.
+    - Requires adaptation to a serverless computing model.
+- Traditional Server-Based Execution:
+  - Cons:
+    - Higher operational overhead and cost.
+    - Limited scalability and flexibility.
+- Container-Based Execution:
+  - Cons:
+    - Requires container orchestration and management.
+    - May introduce additional complexity in deployment and scaling.
+
+## Consequences
+The use of AWS Lambda for serverless functions will enhance scalability and reduce operational costs by allowing functions to scale automatically with demand. It simplifies infrastructure management by eliminating the need for server maintenance. However, it introduces constraints on execution time and resources, requiring adaptation to a serverless model. The long-term benefits include improved scalability, cost-efficiency, and reduced operational overhead.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+None

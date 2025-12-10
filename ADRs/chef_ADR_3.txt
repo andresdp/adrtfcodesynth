@@ -1,0 +1,60 @@
+# ADR: Implementation of Asynchronous Communication
+
+## Title
+Implementation of Asynchronous Communication
+
+## Status
+Accepted
+
+## Motivation
+The existing architecture relies heavily on synchronous communication, which can lead to tight coupling and reduced resilience. As the application transitions to a microservices architecture, adopting asynchronous communication mechanisms will decouple services, enhance resilience, and improve scalability by allowing services to communicate through events rather than direct calls.
+
+## Decision Drivers
+- Need for decoupling services to improve resilience
+- Desire to enhance scalability through asynchronous interactions
+- Requirement to support event-driven architecture patterns
+
+## Main Decision
+The decision is to implement asynchronous communication using AWS SNS and SQS. These services will facilitate event-driven interactions between microservices, allowing them to communicate without direct dependencies. This approach enhances resilience by decoupling services and supports scalability by enabling services to handle events independently.
+
+## Alternatives
+- Maintain synchronous communication: Continue using direct service-to-service calls.
+- Use a different messaging system: Implement a non-AWS messaging solution for asynchronous communication.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Decouples services, enhancing resilience and fault tolerance.
+    - Supports scalability by enabling independent event handling.
+    - Leverages AWS's managed services, reducing operational overhead.
+- Alternative 1:
+  - Pros:
+    - Simplicity in maintaining existing communication patterns.
+    - No additional infrastructure required.
+- Alternative 2:
+  - Pros:
+    - Potentially more customizable to specific needs.
+    - Avoids vendor lock-in with AWS services.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Increases system complexity with additional components.
+    - Requires changes to existing communication patterns.
+- Alternative 1:
+  - Cons:
+    - Maintains tight coupling between services.
+    - Limits scalability and resilience improvements.
+- Alternative 2:
+  - Cons:
+    - Requires additional development and integration effort.
+    - Potentially higher operational overhead compared to AWS services.
+
+## Consequences
+Implementing asynchronous communication will enhance system resilience and scalability by decoupling services. It introduces additional complexity but provides significant benefits in terms of fault tolerance and flexibility. This decision aligns with the goal of adopting modern architecture practices and improving system robustness.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+N/A

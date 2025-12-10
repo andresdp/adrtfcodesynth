@@ -1,0 +1,63 @@
+# ADR: Migration to Microservices Architecture
+
+## Title
+Migration to Microservices Architecture
+
+## Status
+Accepted
+
+## Motivation
+The existing hybrid architecture is primarily monolithic, which limits scalability, maintainability, and flexibility. The tightly coupled components and single deployment unit hinder the ability to scale individual parts of the application independently and adopt new technologies. A shift to a microservices architecture is needed to address these limitations and align with modern architectural practices, enabling independent deployment, scaling, and improved resilience.
+
+## Decision Drivers
+- Need for improved scalability and flexibility
+- Desire to enhance maintainability and ease of updates
+- Requirement for independent deployment and scaling of services
+- Organizational push towards adopting modern architectural patterns
+
+## Main Decision
+The decision is to migrate the application from a hybrid monolithic architecture to a fully microservices-based architecture. This involves decomposing the monolithic components into smaller, independent services, each responsible for a specific business capability. These services will communicate over a network using HTTP/REST and asynchronous messaging where appropriate. The architecture will leverage AWS Lambda functions and an API Gateway to manage requests and provide a centralized entry point for client interactions.
+
+## Alternatives
+- **Continue with Hybrid Architecture**: Maintain the current architecture with minor improvements.
+- **Adopt a Modular Monolith**: Refactor the monolith into a more modular design without fully transitioning to microservices.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Enables independent scaling and deployment of services.
+    - Facilitates the adoption of new technologies and practices.
+    - Improves system resilience and fault tolerance.
+- Continue with Hybrid Architecture:
+  - Pros:
+    - Minimal disruption to existing systems.
+    - Lower initial implementation cost.
+- Adopt a Modular Monolith:
+  - Pros:
+    - Retains some benefits of a monolith while improving modularity.
+    - Easier transition compared to a full microservices migration.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Increased complexity due to distributed nature.
+    - Requires significant refactoring and potential re-architecture.
+- Continue with Hybrid Architecture:
+  - Cons:
+    - Limited scalability and flexibility improvements.
+    - Continues to face maintainability challenges.
+- Adopt a Modular Monolith:
+  - Cons:
+    - May not fully realize the benefits of microservices.
+    - Still constrained by monolithic deployment limitations.
+
+## Consequences
+The migration to a microservices architecture will enhance scalability, allowing individual services to be scaled based on demand. It will improve maintainability by enabling independent updates and deployments. However, it introduces complexity in managing distributed services and requires robust network infrastructure to handle inter-service communication. The transition will involve a significant initial investment in refactoring and re-architecture, but it will provide long-term benefits in flexibility and resilience.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+None
+
+---

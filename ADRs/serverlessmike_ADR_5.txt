@@ -1,0 +1,18 @@
+# ADR: Data Management Strategy for Microservices
+
+## Title
+Data Management Strategy for Microservices
+
+## Status
+Accepted
+
+## Motivation
+Effective data management is critical in a microservices architecture to ensure data consistency, integrity, and availability. This decision addresses the need for a data management strategy that supports service independence while maintaining data consistency across the system.
+
+## Decision Drivers
+- Requirement for service independence in data management.
+- Need for maintaining data consistency and integrity.
+- Desire to support polyglot persistence and flexibility in data storage.
+
+## Main Decision
+The decision is to adopt a decentralized data management strategy, where each microservice manages its own database. This approach supports service independence and allows each service to choose the most suitable data storage technology, enabling polygl

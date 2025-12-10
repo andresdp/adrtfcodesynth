@@ -1,0 +1,63 @@
+# ADR: Deployment Model with AWS Lambda
+
+## Title
+Deployment Model with AWS Lambda
+
+## Status
+Accepted
+
+## Motivation
+The existing deployment model is centralized and lacks flexibility, limiting the ability to scale and adapt to changing demands. Adopting a serverless deployment model with AWS Lambda will enable more efficient resource utilization and scalability.
+
+## Decision Drivers
+- Need for scalable and cost-effective deployment.
+- Requirement for flexible resource allocation based on demand.
+- Desire to reduce operational overhead and complexity.
+
+## Main Decision
+The decision is to deploy specific microservices as AWS Lambda functions, leveraging the serverless model for event-driven processing and independent scaling. This approach will reduce infrastructure management overhead and allow services to scale automatically in response to demand, improving cost efficiency and performance.
+
+## Alternatives
+- Traditional VM-based deployment on EC2 instances.
+- Containerized deployment using ECS or Kubernetes.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Reduces operational overhead with automatic scaling.
+    - Enhances cost efficiency by paying only for used resources.
+    - Simplifies deployment and management with serverless infrastructure.
+- Traditional VM-based:
+  - Pros:
+    - Provides full control over the environment and resources.
+    - Familiar and well-understood deployment model.
+- Containerized deployment:
+  - Pros:
+    - Offers flexibility in resource allocation and scaling.
+    - Supports consistent environments across development and production.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Limited control over execution environment.
+    - Potential cold start latency for infrequently used functions.
+- Traditional VM-based:
+  - Cons:
+    - Higher operational overhead and complexity.
+    - Limited scalability and flexibility.
+- Containerized deployment:
+  - Cons:
+    - Requires container orchestration and management.
+    - Potentially higher complexity in setup and operation.
+
+## Consequences
+Deploying services as AWS Lambda functions will improve scalability and cost efficiency while reducing operational complexity. However, it may introduce challenges related to execution environment control and cold start latency, which need to be managed effectively.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+- Related ADRs: Transition to Microservices Architecture, Communication Style.
+```
+
+```markdown

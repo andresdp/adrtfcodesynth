@@ -1,0 +1,10 @@
+# ADR: Adoption of Serverless Components
+
+## Title
+Adoption of Serverless Components
+
+## Status
+Accepted
+
+## Motivation
+The existing architecture lacks serverless components, which limits operational efficiency and scalability. As

@@ -1,0 +1,57 @@
+# ADR: Deployment Model for Microservices
+
+## Title
+Deployment Model for Microservices
+
+## Status
+Accepted
+
+## Motivation
+A robust deployment model is essential for managing the lifecycle of microservices, ensuring efficient deployment, scaling, and management of services. This decision addresses the need for a deployment strategy that supports independent service deployment and scaling while minimizing operational overhead.
+
+## Decision Drivers
+- Requirement for independent deployment and scaling of services.
+- Need for efficient management of service lifecycle.
+- Desire to minimize operational complexity and overhead.
+
+## Main Decision
+The decision is to adopt a container-based deployment model using AWS ECS or Kubernetes to manage microservices. This model allows each service to be packaged as a container, enabling consistent deployment across environments. Containers provide isolation and resource management, facilitating independent scaling and deployment. AWS ECS or Kubernetes will orchestrate the deployment, scaling, and management of containers, reducing operational complexity.
+
+## Alternatives
+- Traditional VM-based deployment: Use virtual machines for deploying services.
+- Serverless deployment: Deploy services as serverless functions using AWS Lambda.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Enables consistent and repeatable deployments across environments.
+    - Facilitates independent scaling and management of services.
+- Alternative 1:
+  - Pros:
+    - Familiarity with existing VM-based infrastructure.
+- Alternative 2:
+  - Pros:
+    - Eliminates server management, reducing operational overhead.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Initial complexity in setting up container orchestration.
+    - Potential learning curve for container management.
+- Alternative 1:
+  - Cons:
+    - Limited scalability and flexibility compared to containers.
+- Alternative 2:
+  - Cons:
+    - Potential limitations in service execution time and resource management.
+
+## Consequences
+The container-based deployment model will enhance scalability and flexibility, allowing services to be deployed and managed independently. However, it requires initial setup and learning to effectively manage container orchestration and deployment.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+N/A
+
+---

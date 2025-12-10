@@ -1,0 +1,60 @@
+# ADR: Adoption of API Gateway for Service Routing
+
+## Title
+Adoption of API Gateway for Service Routing
+
+## Status
+Accepted
+
+## Motivation
+As the application transitions to a microservices architecture, there is a need for a centralized mechanism to manage and route incoming requests to the appropriate services. An API Gateway provides a single entry point for client requests, enabling efficient routing, security, and monitoring, which are essential for managing a distributed system.
+
+## Decision Drivers
+- Requirement for centralized request routing and management
+- Need for enhanced security and monitoring capabilities
+- Desire to simplify client interactions with multiple services
+
+## Main Decision
+The decision is to implement an API Gateway to serve as the single entry point for all client requests. The API Gateway will handle routing requests to the appropriate microservices, enforce security policies, and provide monitoring and logging capabilities. This approach simplifies client interactions, enhances security, and provides a centralized point for managing service communication.
+
+## Alternatives
+- Direct client-to-service communication: Allow clients to interact directly with individual services.
+- Use of a custom-built routing solution: Develop an in-house solution for request routing and management.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Centralizes request routing and management.
+    - Enhances security through centralized policy enforcement.
+    - Simplifies client interactions with a single entry point.
+- Alternative 1:
+  - Pros:
+    - Reduces infrastructure complexity.
+    - Eliminates the need for an additional component.
+- Alternative 2:
+  - Pros:
+    - Customizable to specific application needs.
+    - Full control over routing logic and implementation.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Introduces an additional component to manage.
+    - Potential single point of failure if not properly configured.
+- Alternative 1:
+  - Cons:
+    - Increases complexity for clients interacting with multiple services.
+    - Lacks centralized security and monitoring capabilities.
+- Alternative 2:
+  - Cons:
+    - Requires significant development and maintenance effort.
+    - Potentially less reliable than a mature, third-party solution.
+
+## Consequences
+The adoption of an API Gateway will centralize request management, enhancing security and simplifying client interactions. It introduces an additional component to manage but provides significant benefits in terms of routing efficiency and security. This decision aligns with the goal of improving system manageability and resilience.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+N/A

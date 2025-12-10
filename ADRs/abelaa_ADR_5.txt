@@ -1,0 +1,18 @@
+# ADR: Data Management Strategy
+
+## Title
+Data Management Strategy
+
+## Status
+Accepted
+
+## Motivation
+The current monolithic architecture uses a centralized database, which limits scalability and flexibility. A new data management strategy is needed to support the microservices architecture, enabling independent data storage and access for each service.
+
+## Decision Drivers
+- Need for independent data management to support service autonomy.
+- Requirement for scalability and performance improvements.
+- Desire for flexibility in choosing data storage technologies.
+
+## Main Decision
+The decision is

@@ -1,0 +1,63 @@
+# ADR: Communication Style with API Gateway
+
+## Title
+Communication Style with API Gateway
+
+## Status
+Accepted
+
+## Motivation
+The existing architecture relies heavily on synchronous communication, limiting resilience and flexibility. Adopting a more robust communication style is necessary to support the microservices architecture, ensuring efficient and reliable interactions between services.
+
+## Decision Drivers
+- Need for improved resilience and fault tolerance.
+- Requirement for flexible and efficient service communication.
+- Desire for centralized management of API traffic and security.
+
+## Main Decision
+The decision is to implement an API Gateway as the central communication hub for all microservices. The API Gateway will handle routing, authentication, and rate limiting, providing a single entry point for client requests. Services will communicate asynchronously where possible, using messaging queues like SQS or SNS to decouple interactions and improve resilience.
+
+## Alternatives
+- Direct service-to-service communication without an API Gateway.
+- Use of a service mesh for communication management.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Centralizes API management and security.
+    - Supports asynchronous communication for improved resilience.
+    - Simplifies client interactions with a single entry point.
+- Direct service-to-service:
+  - Pros:
+    - Reduces initial setup complexity.
+    - Allows direct, low-latency communication.
+- Service mesh:
+  - Pros:
+    - Provides advanced traffic management and observability.
+    - Enhances security and resilience through service-level policies.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Introduces additional complexity in configuration and management.
+    - Potentially increases latency due to centralized routing.
+- Direct service-to-service:
+  - Cons:
+    - Lacks centralized management and security.
+    - Increases coupling between services.
+- Service mesh:
+  - Cons:
+    - Requires significant infrastructure and operational overhead.
+    - Complexity in setup and management.
+
+## Consequences
+Implementing an API Gateway will improve resilience, security, and manageability of service communication. It introduces some complexity but provides a scalable and flexible solution for handling client requests and inter-service interactions.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+- Related ADRs: Transition to Microservices Architecture, Decomposition Strategy.
+```
+
+```markdown

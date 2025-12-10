@@ -1,0 +1,61 @@
+# ADR: Transition to Microservices Architecture
+
+## Title
+Transition to Microservices Architecture
+
+## Status
+Accepted
+
+## Motivation
+The existing hybrid architecture, primarily monolithic with a single Lambda function, limits scalability, flexibility, and resilience. As the application grows, the need for independent scaling, easier maintenance, and improved fault tolerance becomes critical. A microservices architecture promises to address these issues by enabling independent deployment and scaling of services, fostering resilience through distributed deployment, and allowing for more flexible technology adoption.
+
+## Decision Drivers
+- Need for improved scalability and flexibility
+- Desire for independent deployment and scaling of services
+- Requirement for enhanced resilience and fault tolerance
+- Organizational shift towards modern architecture practices
+
+## Main Decision
+The decision is to migrate from a hybrid monolithic architecture to a fully microservices-based architecture. This involves decomposing the monolithic application into smaller, independent services that can be developed, deployed, and scaled independently. The architecture will leverage AWS Lambda functions, API Gateway, and other AWS services to support this transition. This approach addresses the need for scalability, flexibility, and resilience while aligning with modern development practices.
+
+## Alternatives
+- Maintain the existing hybrid architecture: Continue with the monolithic core and single Lambda function.
+- Partial decomposition: Decompose only critical parts of the application into microservices while keeping the rest monolithic.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Enables independent scaling and deployment of services.
+    - Enhances system resilience and fault tolerance.
+    - Facilitates the adoption of new technologies and practices.
+- Alternative 1:
+  - Pros:
+    - Simplicity in maintaining a single codebase.
+    - Lower initial migration effort.
+- Alternative 2:
+  - Pros:
+    - Reduces migration complexity compared to full decomposition.
+    - Allows gradual transition and testing of microservices approach.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Increases system complexity and operational overhead.
+    - Requires significant initial effort for migration and restructuring.
+- Alternative 1:
+  - Cons:
+    - Limits scalability and flexibility.
+    - Maintains existing maintenance and resilience challenges.
+- Alternative 2:
+  - Cons:
+    - May lead to inconsistent architecture and technical debt.
+    - Partial benefits compared to full microservices transition.
+
+## Consequences
+The transition to microservices will initially increase complexity and require significant effort. However, it will provide long-term benefits in scalability, flexibility, and resilience. The architecture will be better equipped to handle future growth and changes, supporting independent service deployment and scaling. This decision aligns with organizational goals of adopting modern architecture practices.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+N/A

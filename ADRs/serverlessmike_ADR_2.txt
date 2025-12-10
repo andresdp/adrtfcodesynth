@@ -1,0 +1,62 @@
+# ADR: Adoption of API Gateway
+
+## Title
+Adoption of API Gateway
+
+## Status
+Accepted
+
+## Motivation
+The current architecture lacks a centralized mechanism for managing client requests, leading to potential security and management challenges. An API Gateway is needed to provide a single entry point for client interactions, enabling request routing, authentication, and rate limiting. This will enhance security, manageability, and scalability of the application.
+
+## Decision Drivers
+- Need for centralized request management
+- Requirement for enhanced security and authentication
+- Desire for improved scalability and request handling
+
+## Main Decision
+The decision is to adopt an API Gateway as the centralized entry point for all client requests. The API Gateway will handle routing requests to the appropriate microservices, manage authentication and authorization, and enforce rate limiting and other policies. This will streamline request management and enhance the overall security and scalability of the application.
+
+## Alternatives
+- **Direct Service Access**: Allow clients to interact directly with individual services.
+- **Custom Middleware**: Develop a custom middleware solution for request management.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Provides a centralized point for managing requests and enforcing policies.
+    - Enhances security through integrated authentication and authorization.
+    - Simplifies client interactions with a single entry point.
+- Direct Service Access:
+  - Pros:
+    - Simplifies architecture by removing an additional layer.
+    - Reduces latency by eliminating an intermediary.
+- Custom Middleware:
+  - Pros:
+    - Allows for tailored request management solutions.
+    - Provides flexibility in implementing custom policies.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Introduces additional complexity and potential latency.
+    - Requires management and configuration of the API Gateway.
+- Direct Service Access:
+  - Cons:
+    - Increases security risks with multiple exposed endpoints.
+    - Complicates request management and policy enforcement.
+- Custom Middleware:
+  - Cons:
+    - Requires development and maintenance of custom solutions.
+    - May not provide the robustness and features of a dedicated API Gateway.
+
+## Consequences
+The adoption of an API Gateway will centralize request management, enhancing security and scalability. It will simplify client interactions and provide a robust mechanism for enforcing policies. However, it introduces additional complexity and potential latency, requiring careful management and configuration. The long-term benefits include improved security, scalability, and manageability of the application.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+None
+
+---

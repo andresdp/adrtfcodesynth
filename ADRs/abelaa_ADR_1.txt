@@ -1,0 +1,64 @@
+# ADR: Transition to Microservices Architecture
+
+## Title
+Transition to Microservices Architecture
+
+## Status
+Accepted
+
+## Motivation
+The existing hybrid architecture, primarily monolithic with some decoupling attempts, limits scalability, maintainability, and resilience. As the application grows, these limitations hinder performance and adaptability to changing business needs. Transitioning to a microservices architecture is necessary to address these issues, enabling independent scaling, improved fault tolerance, and more flexible technology adoption.
+
+## Decision Drivers
+- Need for improved scalability to handle increased load.
+- Requirement for enhanced maintainability and ease of updates.
+- Desire for greater resilience and fault tolerance.
+- Organizational push towards modern architectural practices.
+
+## Main Decision
+The decision is to transition the application from a hybrid architecture to a fully microservices-based architecture. This involves decomposing the monolithic core into smaller, independently deployable services, each responsible for a specific business function. The architecture will leverage AWS Lambda functions and API Gateway for routing and communication, enabling asynchronous messaging and independent scaling of services.
+
+## Alternatives
+- Maintain the hybrid architecture with incremental improvements.
+- Transition to a fully serverless architecture using AWS Lambda for all components.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Enables independent scaling of services.
+    - Improves resilience by isolating failures to individual services.
+    - Facilitates technology diversity and flexibility.
+- Maintain hybrid architecture:
+  - Pros:
+    - Lower initial cost and effort.
+    - Retains some benefits of monolithic simplicity.
+- Fully serverless architecture:
+  - Pros:
+    - Maximizes scalability and cost efficiency.
+    - Simplifies deployment and management.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Increased complexity in service management and orchestration.
+    - Requires significant refactoring and re-architecture effort.
+- Maintain hybrid architecture:
+  - Cons:
+    - Limited scalability and resilience improvements.
+    - Continues to suffer from monolithic constraints.
+- Fully serverless architecture:
+  - Cons:
+    - Potentially higher operational costs for high-load applications.
+    - Requires significant changes to application logic and data handling.
+
+## Consequences
+Transitioning to microservices will improve scalability, resilience, and maintainability in the long term. However, it introduces short-term complexity and requires significant investment in refactoring and infrastructure changes. The architecture will better support future growth and adaptability to new business requirements.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+- Related ADRs: Decomposition Strategy, Communication Style, Deployment Model.
+```
+
+```markdown

@@ -1,0 +1,63 @@
+# ADR: Decomposition Strategy for Monolithic Core
+
+## Title
+Decomposition Strategy for Monolithic Core
+
+## Status
+Accepted
+
+## Motivation
+The monolithic core of the application, identified as `pcmt`, handles multiple responsibilities, making it difficult to scale, maintain, and update. Decomposing this core into smaller, focused services is essential to achieve the benefits of a microservices architecture.
+
+## Decision Drivers
+- Need for clear service boundaries and responsibilities.
+- Requirement for independent deployment and scaling.
+- Desire for improved maintainability and reduced complexity.
+
+## Main Decision
+The decision is to decompose the monolithic core into distinct microservices, each responsible for a specific domain or business function. This will be achieved by analyzing existing functionalities and identifying logical boundaries for service separation. Each service will be independently deployable and scalable, with well-defined APIs for communication.
+
+## Alternatives
+- Maintain the monolithic core with internal modularization.
+- Decompose only critical components and retain a semi-monolithic structure.
+
+## Pros
+- Main decision:
+  - Pros:
+    - Facilitates independent development and deployment.
+    - Enhances maintainability by reducing complexity.
+    - Improves scalability by allowing targeted resource allocation.
+- Maintain monolithic core:
+  - Pros:
+    - Minimal disruption to existing codebase.
+    - Retains benefits of monolithic simplicity.
+- Decompose critical components:
+  - Pros:
+    - Reduces effort compared to full decomposition.
+    - Focuses on high-impact areas for immediate benefits.
+
+## Cons
+- Main decision:
+  - Cons:
+    - Requires significant refactoring and potential re-architecture.
+    - Increases initial complexity and coordination efforts.
+- Maintain monolithic core:
+  - Cons:
+    - Limited scalability and maintainability improvements.
+    - Continues to suffer from monolithic constraints.
+- Decompose critical components:
+  - Cons:
+    - May not fully realize the benefits of microservices.
+    - Can lead to inconsistent architecture and technical debt.
+
+## Consequences
+Decomposing the monolithic core will lead to improved scalability, maintainability, and flexibility. However, it requires careful planning and execution to avoid introducing new complexities. The approach will enable more agile responses to business changes and technological advancements.
+
+## Validation
+Validation to be defined in future iterations.
+
+## Additional Information
+- Related ADRs: Transition to Microservices Architecture, Communication Style.
+```
+
+```markdown
