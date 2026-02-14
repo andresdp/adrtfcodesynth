@@ -1,0 +1,214 @@
+TITLE: Rules and Templates for Translating OpenTofu/Terraform → Microservices Architecture Description
+VERSION: 1.0
+PURPOSE: To extract evidence from IaC resources and write an architectural description with traceable justifications.
+
+──────────────────────────────────────────────────────────────────────────────
+0) HOW TO USE THIS KNOWLEDGE
+- Input: IaC code (.tf/.tf.json modules and resources) and variables.
+- Process: Apply the "evidence detection" rules and use the templates
+  for each dimension (Modularity, Independent Services, 
+  Asynchronous Communication, Distributed Deployment).
+- Output: a structured text report (see Report Template).
+
+Optional: complement with a C4 abstract (Context/Container) and ADRs if there is evidence.
+
+──────────────────────────────────────────────────────────────────────────────
+1) "SERVICE" IDENTIFICATION (deployment unit)
+A "service" is considered to be any autonomously deployable artifact (deployment ECS/EKS/K8s, Lambda/Functions, AppService/CloudRun, etc.)
+Typical evidence in Terraform/OpenTofu:
+- Kubernetes/EKS/K8s: kubernetes_deployment, kubernetes_stateful_set, helm_release
+- AWS: aws_ecs_service, aws_ecs_task_definition, aws_lambda_function,
+       aws_appautoscaling_target, aws_appautoscaling_policy, aws_cloudwatch_log_group
+- GCP: google_cloud_run_service, google_compute_instance_group_manager
+- Azure: azurerm_linux_web_app, azurerm_kubernetes_pod / helm_release
+- Input infra: aws_lb / aws_lb_target_group / aws_apigatewayv2_api / 
+  aws_appmesh_* / aws_cloudmap_service (service discovery)
+- Observability: aws_cloudwatch_dashboard/metric_alarm, datadog_monitor, etc.
+
+Heuristics: "A combination of [workload + scaling + networking + logs/metrics] 
+define a unit of service."
+
+──────────────────────────────────────────────────────────────────────────────
+2) MODULARITY
+Definition: Separation in modules with clear boundaries (code and state), minimal and reusable inputs/outputs.
+
+Strong evidence (add +2 each):
+- Each service is defined in its own module "service_*" or dedicated folder.
+- Separate states (backend config distinct or workspaces per service).
+- Interfaces declared via variables/outputs (without cross-access to internal resources).
+- Reuse of modules (module "service_orders", module "service_payments", etc.).
+
+Average evidence (add +1):
+- Modules by technical layer (network, data, compute) with clean relationships.
+- Consistent tagging per service (Name, Service, Owner, CostCenter).
+
+Anti-patterns (-1 / -2):
+- A single "monolithic" module covering multiple services.
+- Variables that expose internal details of another module (encapsulation leak).
+- Relies on "data" or "remote state" to couple fine resources between services (strong coupling).
+
+Template:
+"Modularity: {HIGH|MEDIA|LOW}. Evidence: {list}. Anti-patterns: {list}. 
+Conclusion: {phrase}."
+
+──────────────────────────────────────────────────────────────────────────────
+3) INDEPENDENT SERVICES (detachment coupling + autonomous deployment)
+Definition: Each service can be versioned, scaled, and deployed without locking in others.
+
+Strong evidence (+2):
+- Per-service autoscaling (aws_appautoscaling_target/policy, HPA on K8s).
+- Pipelines/image generation by service (reference to image/tag by service in task_definition/helm).
+- Service-based security/network (dedicated security groups, network policies).
+
+Average evidence (+1):
+- Databases per service (schemas or separate instances), or at least dedicated credentials/roles.
+- Health checks/target groups per service (ALB/NGINX/Ingress per service).
+- Service discovery (Cloud Map, Consul, App Mesh) para desacoplar endpoints.
+
+Antipatrones:
+- Tightly coupled shared DB (all to a single instance/DB).
+- "Deploy all" (a single pipeline that pushes everything together).
+- SG/VPC rules that mix internal traffic from multiple services without restriction.
+
+Template:
+"Independent services: {HIGH|MEDIUM|LOW}. Evidence: {...}. 
+Risks/anti-patterns detected: {...}. Conclusion: {...}."
+
+──────────────────────────────────────────────────────────────────────────────
+4) ASYNCHRONOUS COMMUNICATION
+Definition: Use of queues, topics or event buses that decouple producers/consumers.
+
+Strong evidence (+2):
+- AWS: aws_sqs_queue, aws_sns_topic, aws_eventbridge_bus/rule, aws_kinesis_stream
+- Kafka: kafka_* (MSK) resources or Helm modules (bitnami/kafka) in K8s.
+- GCP: google_pubsub_topic/subscription; Azure: azurerm_servicebus_namespace/queue/topic
+- Integration pattern: lambda triggers/ecs tasks → from queues/topics.
+
+Average evidence (+1):
+- Retries/Dead-letter queues (DLQ).
+- Publishing domain events (topic names or rules by bounded context).
+
+Anti-patterns:
+- Only synchronous HTTP for business-critical processes (no buffering/queuing).
+- Direct dependencies service↔without resilience/timeout/circuit breaker.
+
+Template:
+"Asynchronous Communication: {HIGH|MEDIA|LOW}. Evidence: {...}. Anti-patterns: {...}. 
+Impact: {tolerable latency, decoupling, resiliency} Conclusion: {...}."
+
+──────────────────────────────────────────────────────────────────────────────
+5) DISTRIBUTED DEPLOYMENT (high disp./multi-AZ/geo)
+Definition: Replicated topology in zones/regions, balancing, fault tolerance.
+
+Strong evidence (+2):
+- Multiple subnets/availability_zones (var.azs; count/for_each by AZ).
+- Balanceadores (aws_lb / ingress) con health checks y target groups.
+- Replicas in K8s (spec.replicas > 1), node pools in several AZ.
+- Providers with multi-region aliases + duplicate resources per region + DNS/Route53 health checks.
+- Data distribuida: read replicas, multi-AZ RDS, cross-region replication (S3/Mongo/ES).
+
+Average evidence (+1):
+- Auto Scaling Groups/Managed Instance Groups.
+- CDN/edge (CloudFront/Cloud CDN) for latencies.
+
+Anti-patterns:
+- Single-AZ.
+- Single points of failure (one LB for all, a single DB with no HA).
+- Lack of health checks.
+
+Template:
+"Distributed Deployment: {HIGH|MEDIUM|LOW}. Evidence: {...}. Risks: {...}. 
+Conclusion: {...}."
+
+──────────────────────────────────────────────────────────────────────────────
+6) SCORE AND VERDICT
+Scale per dimension: 0–6 (LOW 0–2 | MEDIUM 3–4 | HIGH 5–6).
+
+Calculation:
+- Sum of positive and negative evidence by dimension.
+- Final classification (HIGH/MEDIUM/LOW) and brief justification.
+
+──────────────────────────────────────────────────────────────────────────────
+7) MAPPING TABLE (SHORTCUT)
+AWS (examples):
+- Service: aws_ecs_service / aws_lambda_function / kubernetes_deployment
+- Asynchronous: aws_sqs_queue / aws_sns_topic / aws_eventbridge_* / kafka_*
+- Distribuido: subnets en varias AZ, aws_lb + target groups, RDS multi-AZ
+- Independence: app autoscaling by service, dedicated SGs, images by service
+- Modularity: modules per service + separate states + minimal outputs
+
+GCP (examples):
+- Service: google_cloud_run_service / GKE deployment
+- Asynchronous: google_pubsub_topic/subscription
+- Distributed: multiple zones/regions, load balancers
+- Independence: autoscaling per service, VPC firewall rules per service
+
+Azure (examples):
+- Service: azurerm_linux_web_app / AKS deployment
+- Asynchronous: azurerm_servicebus_queue/topic
+- Distributed: Zones by Region, Front Door/ALB, Data Replication
+- Independence: autoscaling and NSG per service
+
+Generic Kubernetes:
+- Service: Deployment/StatefulSet + HPA + Service + Ingress
+- Asynchronous: Kafka/RabbitMQ/Redis Streams (Helm) + CRDs
+- Distribuido: replicas >1 + node pools multi-AZ
+- Independence: charts per service, separate values, namespaces per service
+
+──────────────────────────────────────────────────────────────────────────────
+8) REPORT TEMPLATE (PASTE AND FILL)
+[System/Project Name]
+[Date]
+
+BACKGROUND
+- Vendor(s): {AWS/GCP/Azure/K8s on-prem}
+- Inventory of detected services: {N}; Short list: {service_a, service_b, ...}
+- Scope notes: {repos/paths/branch}
+
+MODULARITY
+- Evidence: {...}
+- Anti-patterns:: {…}
+- Rating: {HIGH|MEDIA|LOW} (score {x}/6)
+- Conclusion: {...}
+
+INDEPENDENT SERVICES
+- Evidence: {...}
+- Anti-patterns: {…}
+- Rating: {HIGH|MEDIUM|LOW} (score {x}/6)
+- Conclusion: {...}
+
+ASYNCHRONOUS COMMUNICATION
+- Evidence: {...}
+- Anti-patterns:: {…}
+- Rating: {HIGH|MEDIA|LOW} (score {x}/6)
+- Conclusion: {...}
+
+DISTRIBUTED DEPLOYMENT
+- Evidence: {...}
+- Anti-patterns:: {…}
+- Rating: {HIGH|MEDIUM|LOW} (score {x}/6)
+- Conclusion: {...}
+
+EXECUTIVE SUMMARY
+- Strengths: {...}
+- Risks: {...}
+- Prioritized recommendations (Top 3): {...}
+
+──────────────────────────────────────────────────────────────────────────────
+9) SENTENCE TEMPLATES (COPY/PASTE)
+- "{HIGH|MEDIA|LOW} since {modules per service / 
+   states separados / outputs aboundados}. {antipattern} is detected that could 
+   generate {risk}."
+- "Each service has a scale and independent pipeline ({evidence}), so 
+   that independence is {HIGH|MEDIA|GO DOWN}."
+- "The presence of {SQS/Kafka/EventBridge/PubSub} with DLQ and retry policies 
+   supports asynchronous communication {ALTA|MEDIA|GO DOWN}."
+- "The deployment is distributed in {multi-AZ/multi-region} with {LB/replicas}, 
+   reaching a level {HIGH|MEDIUM|LOW} fault tolerance."
+
+──────────────────────────────────────────────────────────────────────────────
+10) LIMITATIONS AND BIASES
+- IaC does not always refflects runtime (feature flags, timeouts, circuit breakers).
+- There may be shadow infra or managed services outside of the repo.
+- Confirm with observability (dashboards, alerts) and pipelines (CI/CD) if possible.
+

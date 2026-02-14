@@ -1,0 +1,38 @@
+# Project Configuration File for ADR CodeSynth
+# This file allows users to configure project-specific settings without modifying the codebase
+
+# Project identifier (used for naming output files)
+project_name: "chef"
+
+# Input file paths (relative to this directory)
+terraform_minor: "chef_cloud_evolucion_menor.tf"
+terraform_major: "chef_cloud_evolucion_mayor.tf"
+source_code_zip: "chef_app.zip"
+
+# Knowledge base file path (relative to project root)
+knowledge_base: "knowledge/IAC.txt"
+
+# LLM Configuration
+llm:
+  # Model to use (e.g., gpt-4o, gpt-4-turbo, claude-3-opus)
+  model: "gpt-4.1-mini"
+  
+  # Temperature for LLM responses (0.0 = more deterministic, 1.0 = more creative)
+  temperature: 0.3
+  
+  # Maximum tokens for LLM responses
+  max_tokens: 2000
+  
+  # Optional: Custom API base URL (for Azure OpenAI, custom endpoints, etc.)
+  # base_url: "https://api.openai.com/v1"
+
+# Context Generation Settings
+context_generation:
+  # Maximum number of files to extract from ZIP
+  max_files: 10
+  
+  # Maximum file size in characters before summarizing
+  max_file_size: 5000
+  
+  # Whether to summarize large files (true) or use full content (false)
+  summarize_large_files: false
