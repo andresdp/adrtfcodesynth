@@ -1,3 +1,31 @@
+"""
+Context Generator Node for the ADR workflow.
+
+This node is the first step in the workflow and is responsible for:
+1. Generating theoretical architectural context (optional)
+2. Extracting project structure from source code ZIP
+3. Extracting source code content for analysis
+
+The node uses the ContextGenerator agent to perform the actual extraction
+and can optionally reuse pre-generated theoretical context or generate new one.
+
+State Updates:
+- architectural_context: Theoretical context about software architecture
+- project_structure: Formatted project structure analysis
+- source_code: Concatenated source code content
+- source_code_dict: Dictionary of file paths to content
+- extraction_metadata: Statistics about the extraction
+
+Args:
+    state: ADRWorkflowState containing source_code_zip path
+    llm: Optional ChatOpenAI instance (uses global if not provided)
+    reuse_context: Whether to reuse pre-generated context (default: True)
+    include_knowledge: Whether to include knowledge base content (default: True)
+
+Returns:
+    Updated ADRWorkflowState with extracted context
+"""
+
 from state import ADRWorkflowState
 from agents.context_generator import ContextGenerator
 from config import get_project_config, get_llm_config

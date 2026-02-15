@@ -1,7 +1,37 @@
+"""
+Architecture Diff Agent for comparing architecture analyses.
+
+This agent compares two architecture analyses (typically "minor/hybrid" and "major/microservices")
+to identify the key architectural decisions involved in the migration from one version to another.
+
+Key Features:
+1. Comparison analysis: Identifies differences between two architecture versions
+2. Decision identification: Pinpoints key architectural decisions in the migration
+3. Impact assessment: Evaluates the impact of each decision
+4. Migration insights: Provides insights into the evolution path
+
+Input Versions:
+- hybrid_analysis: Architecture analysis for the hybrid/minor version
+- microservices_analysis: Architecture analysis for the microservices/major version
+
+Usage:
+    from agents.architecture_diff import ArchitectureDiff
+    
+    diff_agent = ArchitectureDiff(llm=chat_openai)
+    result = await diff_agent.compare(
+        hybrid_analysis="hybrid version analysis",
+        microservices_analysis="microservices version analysis",
+        context="theoretical context"
+    )
+    
+    # Returns {"comparison": "comparison text with key decisions"}
+"""
+
 from typing import Dict, Any
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
 
 class ArchitectureDiff:
     """Agent for comparing architecture analyses."""

@@ -1,3 +1,44 @@
+"""
+Context Generator Agent for extracting project structure and source code.
+
+This agent is responsible for extracting and analyzing the project structure
+from a ZIP archive containing the application source code. It provides:
+
+1. Project structure analysis: Identifies directories, source files, 
+   configuration files, and their organization
+2. Source code extraction: Extracts code content from supported file types
+3. Code summarization: Summarizes large files to fit within LLM context limits
+
+Supported file types:
+- Python (.py)
+- TypeScript (.ts)
+- React TypeScript (.tsx)
+- JavaScript (.js)
+- Java (.java)
+- PHP (.php)
+- XML (.xml)
+- Terraform (.tf)
+- Configuration files (requirements.txt, package.json, etc.)
+
+Usage:
+    from agents.context_generator import ContextGenerator
+    
+    generator = ContextGenerator(llm=chat_openai)
+    context = await generator.generate_context(
+        source_code_zip="path/to/app.zip",
+        max_files=10,
+        max_file_size=5000
+    )
+    
+    # Returns:
+    # {
+    #     "project_structure": "...",
+    #     "source_code": "...",
+    #     "source_code_dict": {"file.py": "content"},
+    #     "metadata": {"total_files": 10, "summarized_files": 2}
+    # }
+"""
+
 import zipfile
 from typing import Dict, Any
 from pathlib import Path

@@ -1,3 +1,23 @@
+"""
+Source Code Analyzer Nodes for the ADR workflow.
+
+This module provides two nodes for validating and improving architecture analysis:
+- source_code_analyzer_minor_node: Validates minor version analysis
+- source_code_analyzer_major_node: Validates major version analysis
+
+Each node:
+1. Takes the Terraform analysis and source code from the workflow state
+2. Uses the SourceCodeAnalyzer agent to validate and improve the analysis
+3. Provides an enhanced analysis combining infrastructure and code perspectives
+
+State Updates:
+- improved_analysis_minor: Enhanced analysis for minor version
+- improved_analysis_major: Enhanced analysis for major version
+
+Usage:
+    These nodes run after terraform_analyzer nodes in the workflow.
+"""
+
 from state import ADRWorkflowState
 from agents.source_code_analyzer import SourceCodeAnalyzer
 from config import get_llm_config

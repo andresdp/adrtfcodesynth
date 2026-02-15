@@ -1,3 +1,41 @@
+"""
+ADR Generator Agent for creating Architecture Decision Records.
+
+This agent generates Architecture Decision Records (ADRs) based on the comparison
+between two architecture versions. It uses the MADR (Markdown ADRs) template format.
+
+Key Features:
+1. Multiple ADR generation: Creates up to 5 ADRs for key decisions
+2. Structured output: Uses Pydantic models for structured data
+3. Markdown format: Outputs well-formatted Markdown ADRs
+4. Comprehensive sections: Includes all standard ADR sections
+
+ADR Structure:
+- Title: Short descriptive title
+- Status: Proposed, Accepted, Rejected, Deprecated, or Superseded
+- Motivation: Problem being solved
+- Decision Drivers: Functional requirements, non-functional requirements, constraints
+- Main Decision: Chosen architecture decision
+- Alternatives: Other options considered
+- Pros: Advantages of each option
+- Cons: Disadvantages of each option
+- Consequences: Trade-offs and impact
+- Validation: How the decision can be validated
+- Additional Information: References and notes
+
+Usage:
+    from agents.adr_generator import ADRGenerator
+    
+    generator = ADRGenerator(llm=chat_openai)
+    result = await generator.generate(
+        comparison="architecture comparison text",
+        context="theoretical context",
+        project_name="myproject"
+    )
+    
+    # Returns {"projectname_ADR_1.md": "# ADR: ...", ...}
+"""
+
 import json
 import re
 from typing import Dict, Any, List, Optional

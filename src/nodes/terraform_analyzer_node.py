@@ -1,3 +1,25 @@
+"""
+Terraform Analyzer Nodes for the ADR workflow.
+
+This module provides two nodes for analyzing Terraform files:
+- terraform_analyzer_minor_node: Analyzes the minor evolution Terraform file
+- terraform_analyzer_major_node: Analyzes the major evolution Terraform file
+
+Each node:
+1. Loads the Terraform file content
+2. Optionally loads the knowledge base
+3. Uses the TerraformAnalyzer agent to analyze the code
+4. Returns structured analysis results
+
+State Updates:
+- terraform_analysis_minor: Analysis result for minor version
+- terraform_analysis_major: Analysis result for major version
+
+Usage:
+    These nodes are typically used in the workflow after context_generator_node.
+    They run in parallel after the context is created.
+"""
+
 from state import ADRWorkflowState
 from agents.terraform_analyzer import TerraformAnalyzer
 from config import get_llm_config
@@ -7,17 +29,16 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-
 def load_file(file_path: str) -> str:
-    """
-    Utility method to load a file from the given path.
+    """Load the contents of a file from the given path.
     
     Args:
         file_path: Path to the file to load
         
     Returns:
-        The contents of the file as a string. Returns empty string if file cannot be loaded.
+        The contents of the file as a string, or empty string if loading fails
     """
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             return f.read()

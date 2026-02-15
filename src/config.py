@@ -1,3 +1,33 @@
+"""
+Configuration module for the ADR Code Synth application.
+
+This module provides classes and functions for managing application settings,
+including OpenAI API configuration, LLM initialization, and project-specific
+configuration loading from YAML files.
+
+Main Components:
+    - Settings: Pydantic model for environment-based configuration
+    - LLMConfig: Manages LLM (Language Model) initialization and instances
+    - Global functions: For initializing and accessing configuration state
+
+Usage:
+    # Load settings from environment
+    settings = Settings()
+    
+    # Initialize LLM
+    llm = initialize_llm()
+    
+    # Load project configuration
+    project_config = load_project_config("project-inputs/chef")
+
+Environment Variables:
+    OPENAI_API_KEY: OpenAI API key for authentication
+    OPENAI_MODEL: Model name (default: gpt-4.1-mini)
+    OPENAI_BASE_URL: Optional custom endpoint URL
+    TEMPERATURE: LLM temperature parameter (default: 0.1)
+    MAX_TOKENS: Maximum tokens for LLM response (default: None)
+"""
+
 from langchain_openai import ChatOpenAI
 from pydantic_settings import BaseSettings
 from typing import Optional, Dict, Any

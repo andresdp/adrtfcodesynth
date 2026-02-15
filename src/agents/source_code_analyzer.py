@@ -1,9 +1,42 @@
+"""
+Source Code Analyzer Agent for validating and improving architecture analysis.
+
+This agent validates and enhances the Terraform-based architecture analysis
+by examining the actual source code implementation. It helps ensure that
+the analysis reflects the real code structure rather than just the infrastructure.
+
+Key Features:
+1. Project structure analysis: Examines codebase organization and module boundaries
+2. Code validation: Validates Terraform analysis against actual implementation
+3. Pattern identification: Identifies architectural patterns from code
+4. Improved analysis: Provides enhanced analysis combining infrastructure and code perspectives
+
+Analysis Version Types:
+- minor: Hybrid architecture (monolith + microservices)
+- major: Full microservices-based architecture
+
+Usage:
+    from agents.source_code_analyzer import SourceCodeAnalyzer
+    
+    analyzer = SourceCodeAnalyzer(llm=chat_openai)
+    result = await analyzer.analyze(
+        context="theoretical context",
+        previous_analysis="terraform-based analysis",
+        source_code="extracted source code",
+        version="minor",  # or "major"
+        project_structure="file tree"
+    )
+    
+    # Returns {"analysis": "improved analysis text"}
+"""
+
 import zipfile
 from typing import Dict, Any
 from pathlib import Path
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
 
 class SourceCodeAnalyzer:
     """Agent for analyzing project structure and validating Terraform analysis against source code."""

@@ -1,8 +1,46 @@
+"""
+Workflow state definitions for the ADR Code Synth application.
+
+This module defines the ADRWorkflowState TypedDict which represents the complete
+state that flows through the LangGraph workflow. It contains all inputs,
+intermediate results, outputs, and metadata needed to generate Architecture
+Decision Records (ADRs).
+
+State Structure:
+    - Inputs: terraform_minor, terraform_major, source_code_zip, knowledge_base
+    - Intermediate: architectural_context, project_structure, source_code, etc.
+    - Outputs: adr_files
+    - Metadata: project_name, timestamp
+
+Usage:
+    from state import ADRWorkflowState
+    
+    # Use as type hint for workflow state
+    def process_node(state: ADRWorkflowState) -> ADRWorkflowState:
+        ...
+"""
+
 from typing import TypedDict, Dict, Annotated
 import operator
 
+
 def last_value_reducer(current_value, new_value):
+    """
+    Reducer function for LangGraph state updates.
+    
+    This reducer takes the new value and replaces value,
+    which the current is appropriate for single-value fields in the workflow state.
+    
+    Args:
+        current_value: The current value in the state
+        new_value: The new value to replace with
+        
+    Returns:
+        The new value (simple replacement strategy)
+    """
     return new_value
+
+
 # https://docs.langchain.com/oss/python/langgraph/errors/INVALID_CONCURRENT_GRAPH_UPDATE
 
 # Define workflow state

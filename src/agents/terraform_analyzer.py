@@ -1,3 +1,35 @@
+"""
+Terraform Analyzer Agent for analyzing Infrastructure as Code.
+
+This agent analyzes Terraform files to identify microservices architecture patterns
+and other architectural characteristics. It uses a knowledge base of IaC best
+practices to validate the analysis.
+
+Key Features:
+1. Microservices pattern detection: Identifies indicators of microservices architecture
+2. Confidence scoring: Provides confidence level for the analysis
+3. Evidence-based reasoning: Cites specific code and rule references
+4. Structured output: Returns structured data for downstream processing
+
+Output Structure:
+    - microservices: Boolean indicating if microservices pattern detected
+    - confidence: Float between 0-1 indicating confidence level
+    - signals_for: List of indicators supporting microservices
+    - signals_against: List of indicators suggesting monolithic design
+
+Usage:
+    from agents.terraform_analyzer import TerraformAnalyzer
+    
+    analyzer = TerraformAnalyzer(llm=chat_openai, knowledge_base="IAC rules content")
+    result = await analyzer.analyze(
+        terraform_code="resource \"aws_lambda_function\" ...",
+        context="architectural context",
+        project_structure="file tree"
+    )
+    
+    # Returns MicroservicesAnalysis with structured data
+"""
+
 from typing import Dict, Any
 from pydantic import BaseModel, Field
 

@@ -2,229 +2,432 @@
 
 ## Executive Summary
 
-This report provides a detailed analysis of the **ADR CodeSynth** project, a Jupyter notebook-based system that analyzes Infrastructure as Code (IaC) configurations to generate Architecture Decision Records (ADRs). The system currently operates as a monolithic notebook with sequential processing, using OpenAI's GPT-4o model to analyze Terraform configurations and generate architectural insights.
+This report provides a detailed analysis of the **ADR CodeSynth** project, a Python-based system that uses LangGraph for workflow orchestration to analyze Infrastructure as Code (IaC) configurations and generate Architecture Decision Records (ADRs). The system uses a multi-agent architecture with specialized agents for different analysis tasks, powered by OpenAI's GPT models.
 
-**Key Finding**: The project demonstrates a solid foundation for automated architecture analysis but would benefit significantly from evolving into a multi-agent system for improved modularity, scalability, and maintainability.
+**Key Finding**: The project has evolved from a monolithic notebook to a well-structured multi-agent system using LangGraph, demonstrating good modularity, maintainability, and scalability.
 
 ---
 
 ## 1. Project Structure Analysis
 
-### 1.1 Directory Structure
+### 1.1 Current Directory Structure
 
 ```
 adrtfcodesynth/
-├── adrtfcodesynth.ipynb          # Main Jupyter notebook (1431 lines)
+├── adrtfcodesynth.ipynb          # Root notebook (legacy)
 ├── docs/
 │   └── Paper_ADR.pdf            # Research paper/documentation
 ├── knowledge/
 │   ├── IAC.txt                  # IaC analysis rules (English)
-│   └── IAC-spa.txt             # IaC analysis rules (Spanish)
+│   └── IAC-spa.txt              # IaC analysis rules (Spanish)
 ├── output-adrs/                 # Generated ADR outputs
 │   ├── abelaa_ADR_*.txt
 │   ├── chef_ADR_*.txt
 │   └── serverlessmike_ADR_*.txt
-└── project-inputs/
-    ├── abelaa/
-    │   ├── abelaa_adr_collection.json
-    │   ├── abelaa_app.zip
-    │   ├── abelaa_cloud_evolucion_mayor.tf
-    │   └── abelaa_cloud_evolucion_menor.tf
-    ├── chef/
-    │   ├── chef_adr_collection.json
-    │   ├── chef_app.zip
-    │   ├── chef_cloud_evolucion_mayor.tf
-    │   └── chef_cloud_evolucion_menor.tf
-    └── serverlessmike/
-        ├── serverlessmike_adr_collection.json
-        ├── serverlessmike_app.zip
-        ├── serverlessmike_cloud_evolucion_mayor.tf
-        └── serverlessmike_cloud_evolucion_menor.tf
+├── plans/
+│   └── project-analysis-report.md
+├── project-inputs/
+│   ├── project-config.yaml      # Global project configuration
+│   ├── abelaa/
+│   │   ├── abelaa_adr_collection.json
+│   │   ├── abelaa_app.zip
+│   │   ├── abelaa_cloud_evolucion_mayor.tf
+│   │   ├── abelaa_cloud_evolucion_menor.tf
+│   │   └── project-config.yaml
+│   ├── chef/
+│   │   ├── chef_adr_collection.json
+│   │   ├── chef_app.zip
+│   │   ├── chef_cloud_evolucion_mayor.tf
+│   │   ├── chef_cloud_evolucion_menor.tf
+│   │   └── project-config.yaml
+│   └── serverlessmike/
+│       ├── serverlessmike_adr_collection.json
+│       ├── serverlessmike_app.zip
+│       ├── serverlessmike_cloud_evolucion_mayor.tf
+│       ├── serverlessmike_cloud_evolucion_menor.tf
+│       └── project-config.yaml
+└── src/                         # Main source code package
+    ├── __init__.py
+    ├── config.py                # Configuration management
+    ├── main.py                  # Entry point
+    ├── main_workflow.ipynb      # Testing/demo notebook
+    ├── state.py                 # Workflow state definitions
+    ├── workflow.py              # Main workflow orchestration
+    ├── agents/                  # Agent implementations
+    │   ├── __init__.py
+    │   ├── adr_generator.py
+    │   ├── architecture_diff.py
+    │   ├── context_generator.py
+    │   ├── source_code_analyzer.py
+    │   └── terraform_analyzer.py
+    └── nodes/                   # LangGraph nodes
+        ├── __init__.py
+        ├── adr_generator_node.py
+        ├── architecture_diff_node.py
+        ├── context_generator_node.py
+        ├── source_code_analyzer_node.py
+        └── terraform_analyzer_node.py
 ```
 
 ### 1.2 File Purposes
 
 | File/Directory | Purpose |
 |---------------|---------|
-| [`adrtfcodesynth.ipynb`](adrtfcodesynth.ipynb) | Main processing notebook containing all logic |
+| [`src/config.py`](src/config.py) | Configuration management with Pydantic, LLM initialization |
+| [`src/main.py`](src/main.py) | Entry point, loads environment variables |
+| [`src/state.py`](src/state.py) | ADRWorkflowState TypedDict definition |
+| [`src/workflow.py`](src/workflow.py) | ADRWorkflow class, LangGraph orchestration |
+| [`src/agents/`](src/agents/) | Specialized LLM agents for each task |
+| [`src/nodes/`](src/nodes/) | LangGraph node functions wrapping agents |
+| [`src/main_workflow.ipynb`](src/main_workflow.ipynb) | Testing and demonstration notebook |
 | [`knowledge/IAC.txt`](knowledge/IAC.txt) | Rules for analyzing IaC code for microservices patterns |
-| [`knowledge/IAC-spa.txt`](knowledge/IAC-spa.txt) | Spanish version of IaC analysis rules |
-| `output-adrs/` | Directory containing generated ADR text files |
-| `project-inputs/` | Input data for different projects (Terraform files, ZIP archives, JSON collections) |
+| [`output-adrs/`](output-adrs/) | Generated ADR text files |
+| [`project-inputs/`](project-inputs/) | Input data for different projects |
 
 ---
 
 ## 2. Current Architecture Analysis
 
-### 2.1 Processing Flow
+### 2.1 Architecture Overview
 
-The current system follows a **sequential, monolithic processing pipeline**:
+The system now uses a **multi-agent architecture** built on **LangGraph** for workflow orchestration:
 
 ```mermaid
 flowchart TD
-    A[Start] --> B[Generate Introductory Architecture Context]
-    B --> C[Analyze Terraform - Minor Evolution]
-    C --> D[Validate with Source Code - Minor]
-    D --> E[Analyze Terraform - Major Evolution]
-    E --> F[Validate with Source Code - Major]
-    F --> G[Generate ADRs from Comparison]
-    G --> H[Parse ADRs to JSON]
-    H --> I[End]
+    subgraph Input[Input Layer]
+        A[Project Config]
+        B[Terraform Files]
+        C[Source Code ZIP]
+        D[Knowledge Base]
+    end
     
-    style A fill:#e1f5ff
-    style I fill:#e1f5ff
-    style C fill:#fff4e1
-    style E fill:#fff4e1
-    style G fill:#ffe1e1
+    subgraph Workflow[ADRWorkflow]
+        E[Create Context]
+        F{Terraform Enabled?}
+        G[Analyze Terraform Minor]
+        H[Analyze Terraform Major]
+        I[Validate with Source Minor]
+        J[Validate with Source Major]
+        K[Architecture Diff]
+        L[Generate ADRs]
+    end
+    
+    A --> E
+    B --> E
+    C --> E
+    D --> E
+    
+    E --> F
+    F -->|Yes| G
+    F -->|No| I
+    G --> I
+    H --> J
+    I --> K
+    J --> K
+    K --> L
+    L --> M[Output ADRs]
+    
+    style E fill:#e1f5ff
+    style G fill:#fff4e1
+    style H fill:#fff4e1
+    style I fill:#ffe1e1
+    style J fill:#ffe1e1
+    style K fill:#e1ffe1
+    style L fill:#e1e1ff
 ```
 
-### 2.2 Notebook Cell Breakdown
+### 2.2 Technology Stack
 
-| Cell | Purpose | Dependencies |
-|------|---------|--------------|
-| 1-2 | Install dependencies & load API key | openai, python-dotenv |
-| 3 | Generate architectural context (Markdown) | OpenAI GPT-4o |
-| 4 | Analyze minor evolution Terraform | [`IAC.txt`](knowledge/IAC.txt), Terraform file |
-| 5 | Validate with source code (minor) | ZIP archive, previous analysis |
-| 6 | Analyze major evolution Terraform | [`IAC.txt`](knowledge/IAC.txt), Terraform file |
-| 7 | Validate with source code (major) | ZIP archive, previous analysis |
-| 8 | Generate ADRs from comparison | Both analyses, architectural context |
-| 9 | Parse ADRs to JSON | Generated ADR text files |
-
-### 2.3 Technology Stack
-
-| Component | Technology | Version |
+| Component | Technology | Purpose |
 |-----------|-----------|---------|
-| Language | Python | 3.12.11 |
-| AI Model | OpenAI GPT-4o | Latest |
-| IaC Analysis | Terraform/OpenTofu | - |
-| Output Format | Markdown, JSON | - |
-| Environment | Jupyter Notebook | - |
+| Language | Python 3.11+ | Core implementation |
+| AI Models | OpenAI GPT-4o/GPT-4.1-mini | LLM for analysis |
+| Workflow Orchestration | LangGraph | Graph-based workflow management |
+| State Management | TypedDict | Type-safe state definitions |
+| Configuration | Pydantic + python-dotenv | Settings management |
+| Logging | Python logging | Application logging |
+| Environment | Jupyter Notebook | Testing and demos |
 
-### 2.4 Dependencies
+### 2.3 Key Dependencies
+
+```
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-openai>=0.2.0
+pydantic>=2.0.0
+pydantic-settings>=2.0.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+```
+
+---
+
+## 3. Component Analysis
+
+### 3.1 Configuration Module ([`src/config.py`](src/config.py))
+
+The configuration module provides:
+
+- **Settings class**: Pydantic-based settings loaded from environment variables
+  - `openai_api_key`: OpenAI API key
+  - `openai_model`: Model to use (default: gpt-4.1-mini)
+  - `temperature`: LLM temperature (default: 0.1)
+  - `max_tokens`: Max tokens for responses
+
+- **LLMConfig class**: Manages LLM instance creation and caching
+
+- **Global functions**:
+  - `initialize_llm()`: Initialize global LLM instance
+  - `load_project_config()`: Load project-specific YAML configuration
+  - `get_settings()`: Get global settings
+  - `get_llm_config()`: Get LLM configuration
+  - `get_project_config()`: Get project configuration
+
+### 3.2 State Management ([`src/state.py`))
+
+The workflow state is defined using TypedDict:
 
 ```python
-# Core dependencies
-openai>=2.8.0
-python-dotenv
-zipfile
-json
-glob
+class ADRWorkflowState(TypedDict):
+    # Inputs
+    terraform_minor: str           # Path to minor Terraform
+    terraform_major: str           # Path to major Terraform
+    source_code_zip: str          # Path to source ZIP
+    knowledge_base: str            # Path to knowledge base
+    
+    # Intermediate results
+    architectural_context: str      # Generated context
+    project_structure: str         # Extracted structure
+    source_code: str               # Extracted code
+    source_code_dict: dict         # Code by file
+    extraction_metadata: dict      # Extraction stats
+    terraform_analysis_minor: str  # Minor analysis
+    terraform_analysis_major: str  # Major analysis
+    improved_analysis_minor: str   # Validated minor
+    improved_analysis_major: str  # Validated major
+    architecture_diff: str         # Comparison
+    
+    # Outputs
+    adr_files: dict               # Generated ADRs
+    
+    # Metadata
+    project_name: str
+    timestamp: str
+```
+
+### 3.3 Workflow Orchestration ([`src/workflow.py`](src/workflow.py))
+
+The ADRWorkflow class provides:
+
+- **Initialization**: Loads project config, initializes LLM
+- **Workflow Creation**: Builds LangGraph with configurable nodes
+- **Execution**: Runs the workflow with checkpoint support
+- **Visualization**: Generates workflow graph images
+
+Key methods:
+- `__init__()`: Initialize with project directory
+- `initialize_project()`: Load configuration
+- `create()`: Create and configure workflow
+- `get_graph()`: Get workflow visualization
+- `run()`: Execute workflow
+
+### 3.4 Agents ([`src/agents/`](src/agents/))
+
+Five specialized agents handle different tasks:
+
+| Agent | Purpose | Key Methods |
+|-------|---------|-------------|
+| ContextGenerator | Generate architectural context, extract project structure | `generate_context()` |
+| TerraformAnalyzer | Analyze Terraform for microservices patterns | `analyze()` |
+| SourceCodeValidator | Validate analysis with source code | `analyze()` |
+| ArchitectureDiff | Compare minor and major analyses | `compare()` |
+| ADRGenerator | Generate ADRs from comparison | `generate()` |
+
+### 3.5 Nodes ([`src/nodes/`](src/nodes/))
+
+LangGraph nodes wrapping agents:
+
+| Node | Agent | Function |
+|------|-------|----------|
+| context_generator_node | ContextGenerator | Generate context, extract code |
+| terraform_analyzer_minor_node | TerraformAnalyzer | Analyze minor version |
+| terraform_analyzer_major_node | TerraformAnalyzer | Analyze major version |
+| source_code_analyzer_minor_node | SourceCodeValidator | Validate minor analysis |
+| source_code_analyzer_major_node | SourceCodeValidator | Validate major analysis |
+| architecture_diff_node | ArchitectureDiff | Compare analyses |
+| adr_generator_node | ADRGenerator | Generate final ADRs |
+
+---
+
+## 4. Workflow Execution Flow
+
+### 4.1 Complete Workflow
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant W as ADRWorkflow
+    participant N as Nodes
+    participant A as Agents
+    participant LLM as OpenAI
+    
+    U->>W: Create workflow(project_dir)
+    W->>W: Load project config
+    W->>W: Initialize LLM
+    W->>W: Create workflow graph
+    W-->>U: Return initial_state
+    
+    U->>W: Run workflow(initial_state)
+    
+    W->>N: context_generator_node
+    N->>A: ContextGenerator.generate_context()
+    A->>LLM: Generate context
+    LLM-->>A: Context response
+    A-->>N: Updated state
+    
+    par Parallel Execution
+        N->>N: terraform_analyzer_minor_node
+        N->>N: terraform_analyzer_major_node
+    end
+    
+    par Parallel Execution
+        N->>N: source_code_analyzer_minor_node
+        N->>N: source_code_analyzer_major_node
+    end
+    
+    N->>N: architecture_diff_node
+    N->>N: adr_generator_node
+    
+    W-->>U: Return result with ADRs
+```
+
+### 4.2 Node Processing Details
+
+1. **Context Generator Node**
+   - Extracts source code from ZIP
+   - Generates project structure analysis
+   - Creates architectural context (optional)
+   - Returns: project_structure, source_code, source_code_dict
+
+2. **Terraform Analyzer Nodes** (minor/major)
+   - Loads Terraform file content
+   - Optionally includes knowledge base
+   - Analyzes for microservices patterns
+   - Returns: confidence, signals_for, signals_against
+
+3. **Source Code Analyzer Nodes** (minor/major)
+   - Validates Terraform analysis against code
+   - Identifies additional patterns
+   - Returns: improved_analysis
+
+4. **Architecture Diff Node**
+   - Compares minor and major analyses
+   - Identifies key decisions
+   - Returns: architecture_diff
+
+5. **ADR Generator Node**
+   - Generates ADRs from comparison
+   - Returns: adr_files dict
+
+---
+
+## 5. Project Configuration
+
+### 5.1 Global Configuration ([`project-inputs/project-config.yaml`])
+
+```yaml
+# Global settings (if needed)
+```
+
+### 5.2 Project-Specific Configuration
+
+Each project has its own `project-config.yaml`:
+
+```yaml
+project_name: "abelaa"
+terraform_minor: "abelaa_cloud_evolucion_menor.tf"
+terraform_major: "abelaa_cloud_evolucion_mayor.tf"
+source_code_zip: "abelaa_app.zip"
+knowledge_base: "knowledge/IAC.txt"
+
+llm:
+  model: "gpt-4o"
+  temperature: 0.3
+  max_tokens: 2000
+
+context_generation:
+  max_files: 10
+  max_file_size: 5000
+
+analysis:
+  use_spanish_knowledge_base: false
+  knowledge_base_language: "en"
 ```
 
 ---
 
-## 3. Current Workflow Detailed Analysis
+## 6. Usage Patterns
 
-### 3.1 Phase 1: Context Generation
+### 6.1 Basic Usage
 
-**Purpose**: Generate theoretical background on software architecture
+```python
+from workflow import ADRWorkflow
 
-**Process**:
-- Uses GPT-4o to generate Markdown content about:
-  - Software Architecture
-  - Monolithic Architecture
-  - Microservices Architecture
+# Create workflow
+workflow = ADRWorkflow(project_dir="project-inputs/abelaa")
 
-**Output**: [`intro_architecture.md`](intro_architecture.md) (saved for reuse)
+# Create workflow graph
+initial_state = workflow.create(include_terraform=True, include_knowledge=True)
 
-### 3.2 Phase 2: Terraform Analysis (Minor Evolution)
+# Run workflow
+result = await workflow.run(initial_state)
 
-**Purpose**: Analyze the initial/hybrid architecture
+# Access ADRs
+for filename, content in result["adr_files"].items():
+    print(f"{filename}: {len(content)} chars")
+```
 
-**Process**:
-1. Reads Terraform file (`*_cloud_evolucion_menor.tf`)
-2. Loads IaC rules from [`IAC.txt`](knowledge/IAC.txt)
-3. Constructs prompt with:
-   - Theoretical context
-   - IaC rules
-   - Terraform code
-4. Calls GPT-4o for analysis
-5. Outputs structured analysis with:
-   - Assessment (microservices: true/false)
-   - Justification with evidence citations
-   - Negative signals
-   - Verdict and confidence score
-   - JSON mini-report
+### 6.2 Notebook Usage
 
-**Output**: `{repo}_architecture_analysis1.txt`
-
-### 3.3 Phase 3: Source Code Validation (Minor)
-
-**Purpose**: Validate Terraform analysis against actual source code
-
-**Process**:
-1. Reads previous Terraform analysis
-2. Extracts Python/Terraform files from ZIP archive
-3. Constructs prompt with:
-   - Theoretical context
-   - Previous analysis
-   - Source code
-4. Calls GPT-4o for improved analysis
-5. Identifies additional patterns (Strategy, decoupling, messaging, etc.)
-
-**Output**: `{repo}_architecture_analysis_improved1.txt`
-
-### 3.4 Phase 4: Terraform Analysis (Major Evolution)
-
-**Purpose**: Analyze the evolved/microservices architecture
-
-**Process**: Similar to Phase 2 but with `*_cloud_evolucion_mayor.tf`
-
-**Output**: `{repo}_architecture_analysis2.txt`
-
-### 3.5 Phase 5: Source Code Validation (Major)
-
-**Purpose**: Validate microservices analysis against source code
-
-**Process**: Similar to Phase 3 but for microservices version
-
-**Output**: `{repo}_architecture_analysis_improved2.txt`
-
-### 3.6 Phase 6: ADR Generation
-
-**Purpose**: Generate Architecture Decision Records
-
-**Process**:
-1. Loads both improved analyses (hybrid and microservices)
-2. Constructs prompt with:
-   - Both analyses
-   - Theoretical context
-3. Calls GPT-4o to identify key decisions
-4. Generates ADRs following MADR-inspired template with sections:
-   - Title
-   - Status
-   - Motivation
-   - Decision Drivers
-   - Main Decision
-   - Alternatives
-   - Pros (for each option)
-   - Cons (for each option)
-   - Consequences
-   - Validation
-   - Additional Information
-
-**Output**: Multiple `{repo}_ADR_{n}.txt` files
-
-### 3.7 Phase 7: JSON Conversion
-
-**Purpose**: Parse ADRs into structured JSON
-
-**Process**:
-1. Reads all ADR text files
-2. Parses Markdown structure
-3. Extracts sections into JSON fields
-4. Saves consolidated JSON collection
-
-**Output**: `{repo}_adr_collection.json`
+The [`src/main_workflow.ipynb`](src/main_workflow.ipynb) notebook provides:
+- Step-by-step workflow demonstration
+- Individual node testing capabilities
+- Result visualization
+- Debugging support
 
 ---
 
-## 4. Knowledge Base Analysis
+## 7. Improvements Over Original Design
 
-### 4.1 IaC Analysis Rules ([`knowledge/IAC.txt`](knowledge/IAC.txt))
+### 7.1 Architecture Improvements
 
-The knowledge base provides **structured rules** for analyzing IaC code:
+| Aspect | Before (Notebook) | After (LangGraph) |
+|--------|------------------|------------------|
+| Modularity | Single notebook | Modular Python package |
+| State Management | Global variables | TypedDict with reducers |
+| Workflow | Sequential cells | Graph-based with parallel execution |
+| Error Handling | Limited | Structured error handling |
+| Testing | Difficult | Unit testable components |
+| Reusability | Notebook-dependent | Importable modules |
+| Configuration | Hard-coded | YAML-based project config |
+| Checkpointing | None | LangGraph MemorySaver |
+
+### 7.2 New Features
+
+- **Parallel Execution**: Terraform and source code analysis run in parallel
+- **Configurable Workflow**: Enable/disable Terraform analysis
+- **Knowledge Base Support**: Optional knowledge base integration
+- **Checkpoint Support**: Resume interrupted workflows
+- **Project Configuration**: YAML-based project settings
+- **Extensible Design**: Easy to add new agents/nodes
+
+---
+
+## 8. Knowledge Base
+
+### 8.1 IaC Analysis Rules ([`knowledge/IAC.txt`])
+
+The knowledge base provides structured rules for analyzing IaC code:
 
 **Dimensions Analyzed**:
 1. **Modularity** (+2 to -2 points)
@@ -251,684 +454,60 @@ The knowledge base provides **structured rules** for analyzing IaC code:
    - Replicas
    - Data replication
 
-**Scoring System**:
-- 0-2: LOW
-- 3-4: MEDIUM
-- 5-6: HIGH
+### 8.2 Bilingual Support
 
-### 4.2 Bilingual Support
-
-The system supports both English and Spanish:
-- [`IAC.txt`](knowledge/IAC.txt) - English version
-- [`IAC-spa.txt`](knowledge/IAC-spa.txt) - Spanish version
+- English: [`IAC.txt`](knowledge/IAC.txt)
+- Spanish: [`IAC-spa.txt`](knowledge/IAC-spa.txt)
 
 ---
 
-## 5. Output Format Analysis
+## 9. Output Format
 
-### 5.1 ADR Structure
+### 9.1 ADR Structure
 
-Each ADR follows a consistent structure:
+Each ADR follows MADR-inspired template:
+- Title
+- Status (Proposed/Accepted/Rejected/Deprecated)
+- Motivation
+- Decision Drivers
+- Main Decision
+- Alternatives
+- Pros/Cons for each option
+- Consequences
+- Validation
+- Additional Information
 
-```markdown
-# ADR: <Decision Name>
+### 9.2 Generated Files
 
-## Title
-<Decision Title>
-
-## Status
-Proposed | Accepted | Rejected | Deprecated | Superseded
-
-## Motivation
-<Continuous prose explaining the problem>
-
-## Decision Drivers
-- <driver 1>
-- <driver 2>
-...
-
-## Main Decision
-<Continuous prose describing the chosen approach>
-
-## Alternatives
-- <alternative 1>
-- <alternative 2>
-...
-
-## Pros
-- Main decision:
-  - Pros:
-    - <pro 1>
-    - <pro 2>
-- Alternative 1:
-  - Pros:
-    - <pro 1>
-...
-
-## Cons
-- Main decision:
-  - Cons:
-    - <con 1>
-    - <con 2>
-...
-
-## Consequences
-<Description of positive and negative consequences>
-
-## Validation
-<How the decision can be validated>
-
-## Additional Information
-<References, links, related ADRs>
-```
-
-### 5.2 JSON Collection Format
-
-```json
-[
-  {
-    "adr_name": "Decision Name",
-    "title": "Decision Title",
-    "status": "Accepted",
-    "motivation": "...",
-    "decision_drivers": ["driver1", "driver2"],
-    "main_decision": "...",
-    "alternatives": ["alt1", "alt2"],
-    "pros": "...",
-    "cons": "...",
-    "consequences": "...",
-    "validation": "...",
-    "additional_information": "...",
-    "source_file": "filename.txt"
-  }
-]
-```
+- `project_ADR_1.md` through `project_ADR_5.md`
+- Stored in [`output-adrs/`](output-adrs/) directory
+- JSON collection in project directory
 
 ---
 
-## 6. Identified Issues and Limitations
+## 10. Conclusion
 
-### 6.1 Architecture Issues
+The ADR CodeSynth project has evolved from a monolithic notebook into a well-architected multi-agent system using LangGraph. The new design provides:
 
-| Issue | Severity | Impact |
-|-------|----------|--------|
-| **Monolithic Design** | High | Difficult to maintain, test, and extend |
-| **Sequential Processing** | Medium | No parallelization, slow execution |
-| **Hard-coded Paths** | Medium | Inflexible file handling |
-| **No Error Handling** | High | System failures are not graceful |
-| **No Logging** | Medium | Difficult to debug issues |
-| **No Configuration Management** | Medium | API key and settings embedded in code |
-| **No Input Validation** | Medium | Invalid inputs cause crashes |
-| **No Caching** | Low | Repeated API calls for same context |
+- **Modularity**: Clear separation between agents and nodes
+- **Scalability**: Parallel execution where possible
+- **Maintainability**: Type-safe, testable Python code
+- **Flexibility**: Configurable workflow with optional features
+- **Extensibility**: Easy to add new agents or modify existing ones
 
-### 6.2 Code Quality Issues
-
-| Issue | Severity | Description |
-|-------|----------|-------------|
-| **No Type Hints** | Low | Python code lacks type annotations |
-| **No Docstrings** | Medium | Functions lack documentation |
-| **Magic Numbers** | Low | Hard-coded values (e.g., temperature=0.2) |
-| **Inconsistent Naming** | Low | Mixed English/Spanish variable names |
-| **No Unit Tests** | High | No test coverage |
-| **No CI/CD** | Medium | No automated testing or deployment |
-| **No Version Control Strategy** | Medium | Notebook format is not ideal for version control |
-
-### 6.3 Functional Limitations
-
-| Limitation | Impact |
-|------------|--------|
-| **Single Project Processing** | Can only process one project at a time |
-| **No Batch Processing** | Cannot process multiple projects automatically |
-| **No Progress Tracking** | No visibility into processing status |
-| **No Retry Logic** | API failures cause complete failure |
-| **No Cost Estimation** | No tracking of OpenAI API costs |
-| **No Result Comparison** | Cannot compare ADRs across projects |
-| **No Human Review Workflow** | No mechanism for manual review/approval |
-| **Limited IaC Support** | Only Terraform is supported |
-
-### 6.4 Scalability Issues
-
-| Issue | Impact |
-|-------|--------|
-| **Notebook Format** | Not suitable for production deployment |
-| **No Asynchronous Processing** | Cannot handle concurrent requests |
-| **No Database** | No persistent storage for results |
-| **No API Interface** | Cannot be integrated with other systems |
-| **No Horizontal Scaling** | Cannot distribute load across instances |
+The refactored architecture successfully addresses many of the limitations identified in the original analysis, making the system suitable for production use and future expansion.
 
 ---
 
-## 7. Multi-Agent System Architecture Proposal
-
-### 7.1 Overview
-
-Transform the monolithic notebook into a **multi-agent system** with specialized agents for different tasks:
-
-```mermaid
-flowchart TB
-    subgraph Input[Input Layer]
-        A[Project Config]
-        B[Terraform Files]
-        C[Source Code ZIP]
-    end
-    
-    subgraph Orchestration[Orchestrator Agent]
-        O[Task Coordinator]
-    end
-    
-    subgraph Analysis[Analysis Agents]
-        C1[Context Generator Agent]
-        C2[IaC Analyzer Agent]
-        C3[Source Code Validator Agent]
-        C4[Pattern Detector Agent]
-    end
-    
-    subgraph Synthesis[Synthesis Agents]
-        S1[Comparison Agent]
-        S2[ADR Generator Agent]
-        S3[JSON Parser Agent]
-    end
-    
-    subgraph Output[Output Layer]
-        R1[Markdown ADRs]
-        R2[JSON Collection]
-        R3[Analysis Reports]
-    end
-    
-    A --> O
-    B --> O
-    C --> O
-    
-    O --> C1
-    O --> C2
-    O --> C3
-    O --> C4
-    
-    C1 --> S1
-    C2 --> S1
-    C3 --> S1
-    C4 --> S1
-    
-    S1 --> S2
-    S2 --> S3
-    
-    S3 --> R1
-    S3 --> R2
-    S3 --> R3
-    
-    style O fill:#e1f5ff
-    style C1 fill:#fff4e1
-    style C2 fill:#fff4e1
-    style C3 fill:#fff4e1
-    style C4 fill:#fff4e1
-    style S1 fill:#ffe1e1
-    style S2 fill:#ffe1e1
-    style S3 fill:#ffe1e1
-```
-
-### 7.2 Agent Specifications
-
-#### 7.2.1 Orchestrator Agent
-
-**Responsibilities**:
-- Coordinate task execution
-- Manage agent communication
-- Handle error recovery
-- Track progress
-- Manage resource allocation
-
-**Capabilities**:
-- Task queue management
-- Agent lifecycle management
-- State persistence
-- Retry logic
-- Parallel execution coordination
-
-#### 7.2.2 Context Generator Agent
-
-**Responsibilities**:
-- Generate architectural context
-- Cache generated context
-- Support multiple languages
-- Update context based on new knowledge
-
-**Capabilities**:
-- Context generation with GPT-4o
-- Context versioning
-- Multi-language support
-- Knowledge base integration
-
-#### 7.2.3 IaC Analyzer Agent
-
-**Responsibilities**:
-- Parse Terraform/OpenTofu files
-- Apply IaC analysis rules
-- Generate structured analysis
-- Calculate scores
-
-**Capabilities**:
-- Terraform parsing
-- Rule engine application
-- Evidence extraction
-- Score calculation
-- JSON mini-report generation
-
-#### 7.2.4 Source Code Validator Agent
-
-**Responsibilities**:
-- Extract code from ZIP archives
-- Validate Terraform analysis
-- Identify additional patterns
-- Generate improved analysis
-
-**Capabilities**:
-- ZIP extraction
-- Code parsing (Python, Terraform)
-- Pattern detection (Strategy, CQRS, etc.)
-- Cross-validation logic
-
-#### 7.2.5 Pattern Detector Agent
-
-**Responsibilities**:
-- Identify design patterns
-- Detect architectural styles
-- Classify communication patterns
-- Map to quality attributes
-
-**Capabilities**:
-- Pattern recognition
-- Architectural style classification
-- Quality attribute mapping
-- Anti-pattern detection
-
-#### 7.2.6 Comparison Agent
-
-**Responsibilities**:
-- Compare hybrid vs microservices analyses
-- Identify key differences
-- Highlight evolution points
-- Extract decision points
-
-**Capabilities**:
-- Diff analysis
-- Change detection
-- Decision extraction
-- Impact analysis
-
-#### 7.2.7 ADR Generator Agent
-
-**Responsibilities**:
-- Generate ADRs from comparisons
-- Follow MADR template
-- Ensure consistency
-- Validate ADR completeness
-
-**Capabilities**:
-- ADR template application
-- Content generation
-- Consistency checking
-- Completeness validation
-
-#### 7.2.8 JSON Parser Agent
-
-**Responsibilities**:
-- Parse ADR Markdown
-- Extract structured data
-- Validate JSON schema
-- Generate collections
-
-**Capabilities**:
-- Markdown parsing
-- JSON generation
-- Schema validation
-- Collection management
-
-### 7.3 System Architecture
-
-```mermaid
-flowchart TB
-    subgraph Frontend[Frontend Layer]
-        UI[Web UI / CLI]
-    end
-    
-    subgraph API[API Layer]
-        REST[REST API]
-        WS[WebSocket]
-    end
-    
-    subgraph Core[Core Layer]
-        Orchestrator[Orchestrator]
-        AgentManager[Agent Manager]
-        TaskQueue[Task Queue]
-    end
-    
-    subgraph Agents[Agent Layer]
-        A1[Context Generator]
-        A2[IaC Analyzer]
-        A3[Source Code Validator]
-        A4[Pattern Detector]
-        A5[Comparison Agent]
-        A6[ADR Generator]
-        A7[JSON Parser]
-    end
-    
-    subgraph Services[Service Layer]
-        LLM[LLM Service]
-        Storage[Storage Service]
-        Cache[Cache Service]
-        Log[Logging Service]
-    end
-    
-    subgraph Data[Data Layer]
-        DB[(Database)]
-        FileStore[(File Storage)]
-        KV[(Key-Value Store)]
-    end
-    
-    UI --> REST
-    UI --> WS
-    
-    REST --> Orchestrator
-    WS --> Orchestrator
-    
-    Orchestrator --> AgentManager
-    Orchestrator --> TaskQueue
-    
-    AgentManager --> A1
-    AgentManager --> A2
-    AgentManager --> A3
-    AgentManager --> A4
-    AgentManager --> A5
-    AgentManager --> A6
-    AgentManager --> A7
-    
-    A1 --> LLM
-    A2 --> LLM
-    A3 --> LLM
-    A4 --> LLM
-    A5 --> LLM
-    A6 --> LLM
-    
-    Orchestrator --> Storage
-    Orchestrator --> Cache
-    Orchestrator --> Log
-    
-    Storage --> DB
-    Storage --> FileStore
-    Cache --> KV
-```
-
-### 7.4 Technology Stack Recommendations
-
-| Layer | Technology | Rationale |
-|-------|-----------|-----------|
-| **Frontend** | React + TypeScript | Modern, component-based UI |
-| **Backend** | FastAPI | Fast, async, type-safe |
-| **Orchestration** | Celery + Redis | Distributed task queue |
-| **Agent Framework** | LangChain | LLM agent orchestration |
-| **LLM Service** | OpenAI API | Current provider, easy to swap |
-| **Database** | PostgreSQL | Relational, ACID compliant |
-| **Cache** | Redis | Fast in-memory caching |
-| **File Storage** | MinIO/S3 | Object storage for files |
-| **Message Queue** | RabbitMQ/Redis | Reliable messaging |
-| **Logging** | ELK Stack | Centralized logging |
-| **Monitoring** | Prometheus + Grafana | Metrics and dashboards |
-
----
-
-## 8. Implementation Roadmap
-
-### 8.1 Phase 1: Refactoring (Weeks 1-2)
-
-**Goals**:
-- Extract notebook code to Python modules
-- Add type hints and docstrings
-- Implement basic error handling
-- Add logging
-- Create configuration management
-
-**Deliverables**:
-- Modular Python package structure
-- Configuration file support
-- Basic logging framework
-- Error handling patterns
-
-### 8.2 Phase 2: Agent Framework (Weeks 3-4)
-
-**Goals**:
-- Design agent interface
-- Implement base agent class
-- Create agent manager
-- Implement task queue
-- Add agent communication
-
-**Deliverables**:
-- Agent base class
-- Agent manager
-- Task queue implementation
-- Agent communication protocol
-
-### 8.3 Phase 3: Core Agents (Weeks 5-7)
-
-**Goals**:
-- Implement Context Generator Agent
-- Implement IaC Analyzer Agent
-- Implement Source Code Validator Agent
-- Implement Pattern Detector Agent
-
-**Deliverables**:
-- Four core agents
-- Agent testing suite
-- Integration tests
-
-### 8.4 Phase 4: Synthesis Agents (Weeks 8-9)
-
-**Goals**:
-- Implement Comparison Agent
-- Implement ADR Generator Agent
-- Implement JSON Parser Agent
-
-**Deliverables**:
-- Three synthesis agents
-- End-to-end integration
-- Output validation
-
-### 8.5 Phase 5: API and UI (Weeks 10-12)
-
-**Goals**:
-- Implement REST API
-- Create web UI
-- Add CLI interface
-- Implement authentication
-
-**Deliverables**:
-- REST API documentation
-- Web UI
-- CLI tool
-- Authentication system
-
-### 8.6 Phase 6: Production Readiness (Weeks 13-14)
-
-**Goals**:
-- Add monitoring
-- Implement caching
-- Add rate limiting
-- Create deployment scripts
-- Write documentation
-
-**Deliverables**:
-- Monitoring dashboard
-- Caching layer
-- Deployment guide
-- User documentation
-
----
-
-## 9. Recommendations and Optimizations
-
-### 9.1 Immediate Improvements (High Priority)
-
-1. **Extract to Python Package**
-   - Move notebook code to proper Python modules
-   - Add `pyproject.toml` for package management
-   - Implement proper entry points
-
-2. **Add Configuration Management**
-   - Use `pydantic` for configuration validation
-   - Support environment variables
-   - Create configuration file templates
-
-3. **Implement Error Handling**
-   - Add try-except blocks around API calls
-   - Implement retry logic with exponential backoff
-   - Add graceful degradation
-
-4. **Add Logging**
-   - Use `structlog` for structured logging
-   - Log all API calls and responses
-   - Add performance metrics
-
-5. **Add Input Validation**
-   - Validate file paths exist
-   - Validate file formats
-   - Validate API key format
-
-### 9.2 Medium-Term Improvements
-
-1. **Add Caching**
-   - Cache generated context
-   - Cache analysis results
-   - Use Redis for distributed caching
-
-2. **Implement Parallel Processing**
-   - Run minor and major analysis in parallel
-   - Use asyncio for concurrent API calls
-   - Implement worker pools
-
-3. **Add Database**
-   - Store analysis results
-   - Track processing history
-   - Enable result comparison
-
-4. **Create API Interface**
-   - REST API for programmatic access
-   - WebSocket for real-time updates
-   - Authentication and authorization
-
-5. **Add Testing**
-   - Unit tests for all functions
-   - Integration tests for workflows
-   - Mock LLM responses for testing
-
-### 9.3 Long-Term Improvements
-
-1. **Multi-Agent Architecture**
-   - Implement agent framework
-   - Create specialized agents
-   - Add agent orchestration
-
-2. **Support Multiple IaC Tools**
-   - Add CloudFormation support
-   - Add Pulumi support
-   - Add Kubernetes YAML support
-
-3. **Add Human Review Workflow**
-   - Implement approval process
-   - Add commenting on ADRs
-   - Track revision history
-
-4. **Cost Optimization**
-   - Track API usage and costs
-   - Implement cost alerts
-   - Add caching to reduce calls
-
-5. **Advanced Features**
-   - ADR versioning
-   - ADR linking and dependencies
-   - ADR search and filtering
-   - Export to multiple formats
-
----
-
-## 10. Risk Assessment
-
-### 10.1 Technical Risks
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| **LLM API Changes** | Medium | High | Abstract LLM interface, support multiple providers |
-| **High API Costs** | High | Medium | Implement caching, add cost tracking |
-| **Parsing Errors** | Medium | Medium | Add robust error handling, validation |
-| **Scalability Issues** | Medium | High | Design for horizontal scaling from start |
-
-### 10.2 Project Risks
-
-| Risk | Probability | Impact | Mitigation |
-|------|-------------|--------|------------|
-| **Scope Creep** | High | Medium | Clear requirements, phased delivery |
-| **Resource Constraints** | Medium | High | Prioritize features, use open-source tools |
-| **Knowledge Loss** | Medium | Medium | Document thoroughly, add tests |
-| **Adoption Barriers** | Medium | High | Provide good documentation, examples |
-
----
-
-## 11. Success Metrics
-
-### 11.1 Technical Metrics
-
-- **Processing Time**: < 5 minutes per project (target)
-- **API Cost**: < $5 per project analysis (target)
-- **Uptime**: > 99.5% (production)
-- **Error Rate**: < 1% (production)
-
-### 11.2 Quality Metrics
-
-- **ADR Accuracy**: > 90% (human-validated)
-- **Analysis Completeness**: 100% (all dimensions covered)
-- **Template Compliance**: 100% (all ADRs follow template)
-
-### 11.3 User Metrics
-
-- **User Satisfaction**: > 4/5 (survey)
-- **Adoption Rate**: > 50% (target audience)
-- **Feature Usage**: Track which features are used most
-
----
-
-## 12. Conclusion
-
-The ADR CodeSynth project demonstrates a solid foundation for automated architecture analysis and ADR generation. However, the current monolithic notebook architecture presents significant limitations in terms of maintainability, scalability, and extensibility.
-
-**Key Recommendations**:
-
-1. **Immediate**: Refactor to Python package with proper structure
-2. **Short-term**: Add error handling, logging, and configuration management
-3. **Medium-term**: Implement multi-agent architecture for modularity
-4. **Long-term**: Add production features (API, UI, monitoring)
-
-The proposed multi-agent system architecture will provide:
-- **Modularity**: Each agent has a single responsibility
-- **Scalability**: Agents can be scaled independently
-- **Maintainability**: Easier to test, debug, and extend
-- **Flexibility**: Easy to add new agents or modify existing ones
-- **Resilience**: Failure in one agent doesn't crash the system
-
-By following the implementation roadmap, the project can evolve from a research prototype to a production-ready system that provides significant value to software architecture teams.
-
----
-
-## Appendix A: File References
-
-- [`adrtfcodesynth.ipynb`](adrtfcodesynth.ipynb) - Main notebook
-- [`knowledge/IAC.txt`](knowledge/IAC.txt) - IaC analysis rules (English)
-- [`knowledge/IAC-spa.txt`](knowledge/IAC-spa.txt) - IaC analysis rules (Spanish)
-- [`output-adrs/`](output-adrs/) - Generated ADR outputs
-- [`project-inputs/`](project-inputs/) - Input data for projects
-
-## Appendix B: ADR Template
-
-See Section 5.1 for the complete ADR template structure used by the system.
-
-## Appendix C: Multi-Agent System Diagrams
-
-See Sections 7.1 and 7.3 for detailed system architecture diagrams.
+## Appendix A: File Reference Map
+
+| Component | File | Description |
+|-----------|------|-------------|
+| Entry Point | [`src/main.py`](src/main.py) | Loads environment variables |
+| Configuration | [`src/config.py`](src/config.py) | Settings and LLM management |
+| State | [`src/state.py`](src/state.py) | Workflow state definitions |
+| Workflow | [`src/workflow.py`](src/workflow.py) | Main orchestration class |
+| Agents | [`src/agents/*.py`](src/agents/) | Specialized LLM agents |
+| Nodes | [`src/nodes/*.py`](src/nodes/) | LangGraph node functions |
+| Demo | [`src/main_workflow.ipynb`](src/main_workflow.ipynb) | Testing notebook |
+| Knowledge | [`knowledge/IAC.txt`](knowledge/IAC.txt) | Analysis rules |

@@ -1,3 +1,21 @@
+"""
+ADR Generator Node for the ADR workflow.
+
+This node is the final step in the workflow and generates Architecture Decision Records
+(ADRs) based on the architecture comparison.
+
+The node:
+1. Takes the architecture comparison from the workflow state
+2. Uses the ADRGenerator agent to create ADRs
+3. Returns a dictionary of ADR files
+
+State Updates:
+- adr_files: Dictionary of ADR filename to content
+
+Usage:
+    This node is the final node in the workflow, running after architecture_diff_node.
+"""
+
 from state import ADRWorkflowState
 from agents.adr_generator import ADRGenerator
 from config import get_llm_config
