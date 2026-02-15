@@ -41,6 +41,8 @@ async def terraform_analyzer_minor_node(state: ADRWorkflowState, llm = None, inc
     knowledge_base_content = ""
     if include_knowledge:
         knowledge_base_content = load_file(state["knowledge_base"])
+        state["knowledge_base"] = ""
+    
     terraform_minor_content = load_file(state["terraform_minor"])
 
     analyzer = TerraformAnalyzer(
@@ -68,6 +70,8 @@ async def terraform_analyzer_major_node(state: ADRWorkflowState, llm = None, inc
     knowledge_base_content = ""
     if include_knowledge:
         knowledge_base_content = load_file(state["knowledge_base"])
+        state["knowledge_base"] = ""
+        
     terraform_major_content = load_file(state["terraform_major"])
 
     analyzer = TerraformAnalyzer(
