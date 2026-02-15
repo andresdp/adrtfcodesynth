@@ -1,9 +1,88 @@
 import json
 import re
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
+
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+
+from pydantic import BaseModel, Field
+
+
+class ADR(BaseModel):
+    """Pydantic model for a single Architecture Decision Record."""
+    
+    adr_name: str = Field(description="Short name of the ADR from the '# ADR:' heading")
+    title: str = Field(description="Short and descriptive title of the architecture decision")
+    status: str = Field(description="Status of the decision: Proposed, Accepted, Rejected, Deprecated, or Superseded")
+    motivation: str = Field(description="Explanation of the problem being solved by the decision")
+    decision_drivers: List[str] = Field(description="List of main drivers: functional requirements, non-functional requirements, and constraints")
+    main_decision: str = Field(description="Detailed description of the chosen architecture decision")
+    alternatives: List[str] = Field(description="List of alternative architecture options that were not chosen")
+    pros: str = Field(description="Pros of each decision (main decision and alternatives) with subheadings")
+    cons: str = Field(description="Cons of each decision (main decision and alternatives) with subheadings")
+    consequences: str = Field(description="Positive and negative consequences and trade-offs of the chosen decision")
+    validation: str = Field(description="How the decision can be or has been validated")
+    additional_information: str = Field(description="References, links, related ADRs, issue IDs, or other notes")
+
+    def to_markdown(self) -> str:
+        """Convert an ADR Pydantic model to Markdown format."""
+        lines = [
+            f"# ADR: {self.adr_name}",
+            "",
+            "## Title",
+            self.title,
+            "",
+            "## Status",
+            self.status,
+            "",
+            "## Motivation",
+            self.motivation,
+            "",
+            "## Decision Drivers"
+        ]
+        
+        for driver in self.decision_drivers:
+            lines.append(f"- {driver}")
+        
+        lines.extend([
+            "",
+            "## Main Decision",
+            self.main_decision,
+            "",
+            "## Alternatives"
+        ])
+        
+        for alt in self.alternatives:
+            lines.append(f"- {alt}")
+        
+        lines.extend([
+            "",
+            "## Pros",
+            self.pros,
+            "",
+            "## Cons",
+            self.cons,
+            "",
+            "## Consequences",
+            self.consequences,
+            "",
+            "## Validation",
+            self.validation,
+            "",
+            "## Additional Information",
+            self.additional_information
+        ])
+        
+        return "\n".join(lines)
+
+
+
+class ADRList(BaseModel):
+    """Pydantic model for a list of Architecture Decision Records."""
+    
+    adrs: List[ADR] = Field(description="List of Architecture Decision Records")
+
 
 class ADRGenerator:
     """Agent for generating Architecture Decision Records."""
@@ -19,7 +98,8 @@ class ADRGenerator:
             ("user", self._get_adr_prompt_template())
         ])
         
-        self.adr_chain = self.adr_prompt | self.llm | StrOutputParser()
+        # Use structured output with Pydantic model
+        self.adr_chain = self.adr_prompt | self.llm.with_structured_output(ADRList)
     
     def _get_adr_prompt_template(self) -> str:
         """Get prompt template for ADR generation."""
@@ -155,117 +235,28 @@ class ADRGenerator:
         Return ONLY the ADRs in Markdown format, with no additional explanation or commentary.
         """
     
-    async def generate(self, comparison: str, context: str, 
-                  project_name: str) -> Dict[str, Any]:
+    async def generate(self, comparison: str, context: str, project_name: str) -> Dict[str, Any]:
         """Generate ADRs from architecture comparison."""
         
-        # Invoke LangChain chain for ADR generation
-        adrs_text = await self.adr_chain.ainvoke({
+        # Invoke LangChain chain for ADR generation with structured output
+        adr_list: ADRList = await self.adr_chain.ainvoke({
             "comparison": comparison,
             "context": context
         })
         
-        # Parse ADRs from response
-        adr_blocks = self._split_adrs(adrs_text)
-        
         # Save each ADR to a separate file
-        adr_files = []
-        for idx, block in enumerate(adr_blocks, start=1):
-            filename = f"output-adrs/{project_name}_ADR_{idx}.txt"
-            with open(filename, "w", encoding="utf-8") as f:
-                f.write(block)
-            adr_files.append(filename)
+        adr_files = dict()
+        for idx, adr in enumerate(adr_list.adrs, start=1):
+            filename = f"{project_name}_ADR_{idx}.md"
+            adr_files[filename] = adr.to_markdown()
         
-        # Parse ADRs to JSON
-        adr_json_list = []
-        for adr_file in adr_files:
-            with open(adr_file, "r", encoding="utf-8") as f:
-                content = f.read()
-            adr_obj = self._parse_adr_markdown(content)
-            adr_obj["source_file"] = adr_file
-            adr_json_list.append(adr_obj)
+        # Convert ADR objects to dictionaries for JSON output
+        # adr_json_list = []
+        # for idx, adr in enumerate(adr_list.adrs, start=1):
+        #     adr_dict = adr.model_dump()
+        #     adr_dict["source_file"] = f"output-adrs/{project_name}_ADR_{idx}.txt"
+        #     adr_json_list.append(adr_dict)
         
-        # Save JSON collection
-        json_output = f"project-inputs/{project_name}_adr_collection.json"
-        with open(json_output, "w", encoding="utf-8") as f:
-            json.dump(adr_json_list, f, ensure_ascii=False, indent=2)
-        
-        return {
-            "adr_files": adr_files,
-            "json_collection": {
-                "filename": json_output,
-                "adrs": adr_json_list
-            }
-        }
+        return adr_files
     
-    def _split_adrs(self, text: str) -> List[str]:
-        """Split ADRs by detecting lines that start with '# ADR:'."""
-        adr_blocks = []
-        current_adr_lines = []
-        
-        for line in text.split('\n'):
-            if line.strip().lower().startswith('# adr'):
-                if current_adr_lines:
-                    adr_blocks.append('\n'.join(current_adr_lines))
-                current_adr_lines = [line]
-            else:
-                current_adr_lines.append(line)
-        
-        if current_adr_lines:
-            adr_blocks.append('\n'.join(current_adr_lines))
-        
-        return adr_blocks
-    
-    def _parse_adr_markdown(self, text: str) -> Dict[str, Any]:
-        """Parse a single ADR in Markdown and return a dict with the main fields."""
-        lines = text.split('\n')
-        sections = {}
-        current_section = None
-        current_content = []
-        
-        for line in lines:
-            stripped = line.strip()
-            
-            # Top-level ADR heading
-            if stripped.lower().startswith('# adr'):
-                adr_name = stripped.replace('# ADR:', '').replace('# ADR', '').strip()
-                sections['adr_name'] = adr_name
-                current_section = None
-                current_content = []
-            # Section heading
-            elif stripped.startswith('## '):
-                if current_section:
-                    sections[current_section] = '\n'.join(current_content).strip()
-                current_section = stripped[3:].strip()
-                current_content = []
-            # Accumulate content
-            elif current_section:
-                current_content.append(line)
-        
-        # Add last section
-        if current_section:
-            sections[current_section] = '\n'.join(current_content).strip()
-        
-        def parse_bullet_list(section_name: str) -> List[str]:
-            raw_lines = sections.get(section_name, '').split('\n')
-            items = []
-            for line in raw_lines:
-                s = line.strip()
-                if s.startswith('-') or s.startswith('*'):
-                    items.append(s.lstrip('-* ').strip())
-            return items
-        
-        return {
-            'adr_name': sections.get('adr_name', ''),
-            'title': sections.get('Title', ''),
-            'status': sections.get('Status', ''),
-            'motivation': sections.get('Motivation', ''),
-            'decision_drivers': parse_bullet_list('Decision Drivers'),
-            'main_decision': sections.get('Main Decision', ''),
-            'alternatives': parse_bullet_list('Alternatives'),
-            'pros': sections.get('Pros', ''),
-            'cons': sections.get('Cons', ''),
-            'consequences': sections.get('Consequences', ''),
-            'validation': sections.get('Validation', ''),
-            'additional_information': sections.get('Additional Information', '')
-        }
+

@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     
     # LLM Parameters
     temperature: float = 0.1
-    max_tokens: int = 2000
+    max_tokens: Optional[int] = None # 2000
     
     class Config:
         env_file = ".env"

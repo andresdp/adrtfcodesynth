@@ -1,9 +1,18 @@
-from src.state import ADRWorkflowState
-from src.agents.source_code_analyzer import SourceCodeAnalyzer
-from src.config import llm
+from state import ADRWorkflowState
+from agents.source_code_analyzer import SourceCodeAnalyzer
+from config import get_llm_config
 
-async def source_code_analyzer_minor_node(state: ADRWorkflowState) -> ADRWorkflowState:
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+async def source_code_analyzer_minor_node(state: ADRWorkflowState, llm = None) -> ADRWorkflowState:
     """LangGraph node: Analyze project structure and validate analysis against source code (minor version)."""
+
+    logger.info(f"STEP: source_code_analyzer_minor_node")
+
+    llm = llm or get_llm_config().llm
 
     analyzer = SourceCodeAnalyzer(llm=llm)
 
@@ -13,7 +22,7 @@ async def source_code_analyzer_minor_node(state: ADRWorkflowState) -> ADRWorkflo
     extraction_metadata = state.get("extraction_metadata", {})
 
     # Determine which version to analyze
-    previous_analysis = state["terraform_analysis_minor"]
+    previous_analysis = state.get("terraform_analysis_minor", "")
     version = "minor"
 
     result = await analyzer.analyze(
@@ -22,15 +31,19 @@ async def source_code_analyzer_minor_node(state: ADRWorkflowState) -> ADRWorkflo
         source_code=source_code,
         version=version,
         project_structure=project_structure,
-        extraction_metadata=extraction_metadata
+        # extraction_metadata=extraction_metadata
     )
 
     state["improved_analysis_minor"] = result["analysis"]
     return state
 
 
-async def source_code_analyzer_major_node(state: ADRWorkflowState) -> ADRWorkflowState:
+async def source_code_analyzer_major_node(state: ADRWorkflowState, llm = None) -> ADRWorkflowState:
     """LangGraph node: Analyze project structure and validate analysis against source code (major version)."""
+
+    logger.info(f"STEP: source_code_analyzer_major_node")
+
+    llm = llm or get_llm_config().llm
 
     analyzer = SourceCodeAnalyzer(llm=llm)
 
@@ -40,7 +53,7 @@ async def source_code_analyzer_major_node(state: ADRWorkflowState) -> ADRWorkflo
     extraction_metadata = state.get("extraction_metadata", {})
 
     # Determine which version to analyze
-    previous_analysis = state["terraform_analysis_major"]
+    previous_analysis = state.get("terraform_analysis_major", "")
     version = "major"
 
     result = await analyzer.analyze(
@@ -49,7 +62,7 @@ async def source_code_analyzer_major_node(state: ADRWorkflowState) -> ADRWorkflo
         source_code=source_code,
         version=version,
         project_structure=project_structure,
-        extraction_metadata=extraction_metadata
+        # extraction_metadata=extraction_metadata
     )
 
     state["improved_analysis_major"] = result["analysis"]

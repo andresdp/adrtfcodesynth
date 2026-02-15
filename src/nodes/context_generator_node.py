@@ -1,14 +1,22 @@
 from state import ADRWorkflowState
 from agents.context_generator import ContextGenerator
 from config import get_project_config, get_llm_config
+
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 
-THEORETICAL_ARCHITECTURE_CONTEXT_PROMPT = """
-Generate a detailed theoretical introduction to software architecture, monolithic architecture, and microservices architecture. Format as Markdown."
-"""
+import logging
 
-DEFAULT_THEORETICAL_ARCHITECTURE_CONTEXT_PROMPT = """
+logger = logging.getLogger(__name__)
+
+
+def _theoretical_architecture_context_prompt() -> str:
+    return """
+    Generate a detailed theoretical introduction to software architecture, monolithic architecture, and microservices architecture. Format as Markdown."
+    """
+
+def _generate_theoretical_context() -> str:
+    return """
 # Theoretical Introduction to Software Architecture, Monolithic Architecture, and Microservices Architecture
 
 ## 1. Software Architecture
@@ -114,17 +122,20 @@ Understanding these architectural paradigms is crucial for designing software sy
 async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_context = True) -> ADRWorkflowState:
     """LangGraph node: Generate architectural context and extract project structure."""
 
+    logger.info(f"STEP: context_generator_node")
+
+    llm = llm or get_llm_config().llm
+    
     # Generate architectural context only if not reusing existing context
     if reuse_context:
-        state["architectural_context"] = DEFAULT_THEORETICAL_ARCHITECTURE_CONTEXT_PROMPT
+        state["architectural_context"] = _generate_theoretical_context()
     else:   
         # Generate architectural context using LangChain
         context_prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an expert software architect. Generate comprehensive theoretical context about software architecture, monolithic architecture, and microservices architecture."),
-            ("user", THEORETICAL_ARCHITECTURE_CONTEXT_PROMPT)
+            ("user", _theoretical_architecture_context_prompt())
         ])
 
-        llm = llm or get_llm_config().llm
         context_chain = context_prompt | llm | StrOutputParser()
     
         architectural_context = await context_chain.ainvoke({})
@@ -152,5 +163,8 @@ async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_cont
     state["source_code"] = project_context["source_code"]
     state["source_code_dict"] = project_context["source_code_dict"]
     state["extraction_metadata"] = project_context["metadata"]
+
+    path_knowledge_base = state['knowledge_base']
+    state['knowledge_base'] = "../" +  path_knowledge_base if not path_knowledge_base.startswith("../") else path_knowledge_base
 
     return state

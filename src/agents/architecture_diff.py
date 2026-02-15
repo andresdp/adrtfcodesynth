@@ -21,6 +21,7 @@ class ArchitectureDiff:
     
     def _get_comparison_prompt_template(self) -> str:
         """Get prompt template for architecture comparison."""
+        
         return """
         You are given two versions of an architecture analysis for the same application,
         each one coming from a different implementation and infrastructure:
@@ -56,7 +57,7 @@ class ArchitectureDiff:
         Do not invent technologies or details that are not supported by the analyses.
         Limit the output to at most 5 key decisions.
         
-        Return the answer in well-structured Markdown, with clear headings for each decision.
+        Return the answer in well-structured Markdown, with clear headings for each decision. Do not include a markdown tag at the beginning, just plain markdown format.
         """
     
     async def compare(self, hybrid_analysis: str, microservices_analysis: str, 

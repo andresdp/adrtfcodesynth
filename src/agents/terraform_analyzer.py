@@ -1,7 +1,34 @@
 from typing import Dict, Any
+from pydantic import BaseModel, Field
+
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
+
+import logging
+
+
+logger = logging.getLogger(__name__)
+
+
+class MicroservicesAnalysis(BaseModel):
+    """Structured output for microservices architecture analysis."""
+    
+    microservices: bool = Field(
+        description="Whether the Terraform code describes a microservices architecture pattern"
+    )
+    confidence: float = Field(
+        description="Confidence score between 0 and 1 indicating how certain the analysis is",
+        ge=0.0,
+        le=1.0
+    )
+    signals_for: list[str] = Field(
+        description="List of signals or indicators that suggest microservices architecture"
+    )
+    signals_against: list[str] = Field(
+        description="List of signals or indicators that suggest monolithic architecture"
+    )
+
 
 class TerraformAnalyzer:
     """Agent for analyzing Terraform files against IaC rules."""
@@ -13,15 +40,19 @@ class TerraformAnalyzer:
     
     def _setup_chains(self):
         """Setup LangChain chains for analysis."""
+        # Setup Pydantic output parser for structured output
+        # self.parser = PydanticOutputParser(pydantic_object=MicroservicesAnalysis)
+        
         self.analysis_prompt = ChatPromptTemplate.from_messages([
             ("system", "You are an expert software architect in Infrastructure as Code and cloud-native microservices. You reason rigorously and write for expert architects."),
             ("user", self._get_analysis_prompt_template())
         ])
         
-        self.analysis_chain = self.analysis_prompt | self.llm | StrOutputParser()
+        self.analysis_chain = self.analysis_prompt | self.llm.with_structured_output(MicroservicesAnalysis) # | self.parser
     
     def _get_analysis_prompt_template(self) -> str:
         """Get prompt template for Terraform analysis."""
+        
         return """
         THEORETICAL CONTEXT (Markdown, for expert architects):
         {context}
@@ -62,7 +93,7 @@ class TerraformAnalyzer:
         """
     
     async def analyze(self, terraform_code: str, context: str, 
-                  project_structure: str = "") -> Dict[str, Any]:
+                  project_structure: str = "") -> MicroservicesAnalysis: # -> str: #-> Dict[str, Any]:
         """Analyze Terraform code for microservices patterns."""
         
         # Invoke LangChain chain
@@ -73,18 +104,19 @@ class TerraformAnalyzer:
             "terraform_code": terraform_code
         })
         
-        return {
-            "analysis": analysis,
-            "json_report": self._extract_json(analysis)
-        }
+        # return {
+        #     "analysis": analysis,
+        #     "json_report": self._extract_json(analysis)
+        # }
+        return analysis
     
-    def _extract_json(self, content: str) -> Dict[str, Any]:
-        """Extract JSON mini-report from LLM response."""
-        import re
-        import json
+    # def _extract_json(self, content: str) -> Dict[str, Any]:
+    #     """Extract JSON mini-report from LLM response."""
+    #     import re
+    #     import json
         
-        # Find JSON block in response
-        json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
-        if json_match:
-            return json.loads(json_match.group(1))
-        return {}
+    #     # Find JSON block in response
+    #     json_match = re.search(r'```json\n(.*?)\n```', content, re.DOTALL)
+    #     if json_match:
+    #         return json.loads(json_match.group(1))
+    #     return {}

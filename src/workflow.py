@@ -1,18 +1,26 @@
 from typing import Dict, Any
+from pathlib import Path
+import uuid
+
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
-from pathlib import Path
-
-from src.state import ADRWorkflowState
-from src.config import initialize_llm, load_project_config, get_project_config
-from src.nodes.context_generator_node import context_generator_node
-from src.nodes.terraform_analyzer_node import terraform_analyzer_minor_node, terraform_analyzer_major_node
-from src.nodes.source_code_analyzer_node import source_code_analyzer_minor_node, source_code_analyzer_major_node
-from src.nodes.architecture_diff_node import architecture_diff_node
-from src.nodes.adr_generator_node import adr_generator_node
+from langchain_core.runnables import RunnableConfig
 
 
-def create_workflow(project_dir: str = None) -> StateGraph:
+from state import ADRWorkflowState
+from config import initialize_llm, load_project_config, get_project_config
+from nodes.context_generator_node import context_generator_node
+from nodes.terraform_analyzer_node import terraform_analyzer_minor_node, terraform_analyzer_major_node
+from nodes.source_code_analyzer_node import source_code_analyzer_minor_node, source_code_analyzer_major_node
+from nodes.architecture_diff_node import architecture_diff_node
+from nodes.adr_generator_node import adr_generator_node
+
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+def create_workflow(project_dir: str = None, include_terraform=True) -> StateGraph:
     """
     Create and compile a LangGraph workflow.
     
@@ -35,15 +43,18 @@ def create_workflow(project_dir: str = None) -> StateGraph:
             project_config = load_project_config(str(current_dir))
     
     # Initialize LLM
-    initialize_llm()
+    llm = initialize_llm()
     
     # Create workflow graph
     workflow = StateGraph(ADRWorkflowState)
+
+    logger.info(f"Creating workflow terraform={include_terraform}")
     
     # Add nodes
     workflow.add_node("context_generator", context_generator_node)
-    workflow.add_node("terraform_analyzer_minor", terraform_analyzer_minor_node)
-    workflow.add_node("terraform_analyzer_major", terraform_analyzer_major_node)
+    if include_terraform:
+        workflow.add_node("terraform_analyzer_minor", terraform_analyzer_minor_node)
+        workflow.add_node("terraform_analyzer_major", terraform_analyzer_major_node)
     workflow.add_node("source_code_analyzer_minor", source_code_analyzer_minor_node)
     workflow.add_node("source_code_analyzer_major", source_code_analyzer_major_node)
     workflow.add_node("architecture_diff", architecture_diff_node)
@@ -52,13 +63,19 @@ def create_workflow(project_dir: str = None) -> StateGraph:
     # Define edges (workflow)
     workflow.set_entry_point("context_generator")
     
-    # After context, run both Terraform analyzers in parallel
-    workflow.add_edge("context_generator", "terraform_analyzer_minor")
-    workflow.add_edge("context_generator", "terraform_analyzer_major")
+    if include_terraform:
+        # After context, run both Terraform analyzers in parallel
+        workflow.add_edge("context_generator", "terraform_analyzer_minor")
+        workflow.add_edge("context_generator", "terraform_analyzer_major")
     
-    # After Terraform analysis, validate with source code (parallel)
-    workflow.add_edge("terraform_analyzer_minor", "source_code_analyzer_minor")
-    workflow.add_edge("terraform_analyzer_major", "source_code_analyzer_major")
+        # After Terraform analysis, validate with source code (parallel)
+        workflow.add_edge("terraform_analyzer_minor", "source_code_analyzer_minor")
+        workflow.add_edge("terraform_analyzer_major", "source_code_analyzer_major")
+        
+    else: # No terraform configured
+        # After context, run both source code analyzers in parallel
+        workflow.add_edge("context_generator", "source_code_analyzer_minor")
+        workflow.add_edge("context_generator", "source_code_analyzer_major")
     
     # After validation, compare results (sequential - wait for both to complete)
     workflow.add_edge("source_code_analyzer_minor", "architecture_diff")
@@ -76,7 +93,7 @@ def create_workflow(project_dir: str = None) -> StateGraph:
     return app
 
 
-def run_workflow(project_dir: str, initial_state: Dict[str, Any] = None) -> Dict[str, Any]:
+async def run_workflow(project_dir: str, initial_state: Dict[str, Any] = None, workflow = None, thread_id: str=None) -> Dict[str, Any]:
     """
     Run the workflow for a specific project.
     
@@ -101,9 +118,12 @@ def run_workflow(project_dir: str, initial_state: Dict[str, Any] = None) -> Dict
         }
     
     # Create and run workflow
-    app = create_workflow(project_dir)
+    if workflow is None:
+        workflow = create_workflow(project_dir)
     
     # Run workflow
-    result = app.invoke(initial_state)
+    thread_id = str(uuid.uuid4()) if thread_id is None else thread_id
+    config: RunnableConfig = {"configurable": {"thread_id": "1"}}
+    result = await workflow.ainvoke(initial_state, config=config)
     
     return result

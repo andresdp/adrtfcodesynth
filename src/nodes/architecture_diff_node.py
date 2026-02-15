@@ -1,9 +1,18 @@
-from src.state import ADRWorkflowState
-from src.agents.architecture_diff import ArchitectureDiff
-from src.config import llm
+from state import ADRWorkflowState
+from agents.architecture_diff import ArchitectureDiff
+from config import get_llm_config
 
-async def architecture_diff_node(state: ADRWorkflowState) -> ADRWorkflowState:
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+async def architecture_diff_node(state: ADRWorkflowState, llm = None) -> ADRWorkflowState:
     """LangGraph node: Compare two architecture analyses."""
+
+    logger.info(f"STEP: architecture_diff_node")
+
+    llm = llm or get_llm_config().llm
 
     diff_agent = ArchitectureDiff(llm=llm)
 

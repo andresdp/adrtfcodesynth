@@ -1,13 +1,16 @@
 import zipfile
 from typing import Dict, Any
 from pathlib import Path
+from pydantic import BaseModel, Field
+
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.output_parsers import StrOutputParser, PydanticOutputParser
 
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 class ContextGenerator:
     """Agent for extracting project structure and source code context."""
@@ -458,7 +461,7 @@ class ContextGenerator:
         
         return {
             "project_structure": formatted_structure,
-            "source_code": "", # formatted_source_code,
+            "source_code": formatted_source_code,
             "source_code_dict": source_code,
             "metadata": {
                 "total_files": total_files,
