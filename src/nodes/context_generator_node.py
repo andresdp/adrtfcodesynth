@@ -119,7 +119,7 @@ Understanding these architectural paradigms is crucial for designing software sy
 """
 
 
-async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_context = True) -> ADRWorkflowState:
+async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_context = True, include_knowledge = True) -> ADRWorkflowState:
     """LangGraph node: Generate architectural context and extract project structure."""
 
     logger.info(f"STEP: context_generator_node")
@@ -127,7 +127,9 @@ async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_cont
     llm = llm or get_llm_config().llm
     
     # Generate architectural context only if not reusing existing context
-    if reuse_context:
+    if not include_knowledge:
+        state["architectural_context"] = ""
+    elif reuse_context:
         state["architectural_context"] = _generate_theoretical_context()
     else:   
         # Generate architectural context using LangChain

@@ -111,7 +111,7 @@ class ADRGenerator:
         == ARCHITECTURE COMPARISON ==
         {comparison}
         
-        == THEORETICAL CONTEXT ==
+        == THEORETICAL CONTEXT (if context available) ==
         {context}
         
         Your task is:

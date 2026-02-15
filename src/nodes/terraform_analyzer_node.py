@@ -31,14 +31,16 @@ def load_file(file_path: str) -> str:
         logger.warning(f"Unexpected error loading file {file_path}: {e}")
         return ""
 
-async def terraform_analyzer_minor_node(state: ADRWorkflowState, llm = None) -> ADRWorkflowState:
+async def terraform_analyzer_minor_node(state: ADRWorkflowState, llm = None, include_knowledge = True) -> ADRWorkflowState:
     """LangGraph node: Analyze Terraform file for microservices patterns (minor version)."""
 
     logger.info(f"STEP: terraform_analyzer_minor_node")
 
     llm = llm or get_llm_config().llm
 
-    knowledge_base_content = load_file(state["knowledge_base"])
+    knowledge_base_content = ""
+    if include_knowledge:
+        knowledge_base_content = load_file(state["knowledge_base"])
     terraform_minor_content = load_file(state["terraform_minor"])
 
     analyzer = TerraformAnalyzer(
@@ -56,14 +58,16 @@ async def terraform_analyzer_minor_node(state: ADRWorkflowState, llm = None) -> 
     return state
 
 
-async def terraform_analyzer_major_node(state: ADRWorkflowState, llm = None) -> ADRWorkflowState:
+async def terraform_analyzer_major_node(state: ADRWorkflowState, llm = None, include_knowledge = True) -> ADRWorkflowState:
     """LangGraph node: Analyze Terraform file for microservices patterns (major version)."""
     
     logger.info(f"STEP: terraform_analyzer_major_node")
 
     llm = llm or get_llm_config().llm
-
-    knowledge_base_content = load_file(state["knowledge_base"])
+    
+    knowledge_base_content = ""
+    if include_knowledge:
+        knowledge_base_content = load_file(state["knowledge_base"])
     terraform_major_content = load_file(state["terraform_major"])
 
     analyzer = TerraformAnalyzer(

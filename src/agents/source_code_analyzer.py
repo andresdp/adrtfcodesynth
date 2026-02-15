@@ -36,7 +36,7 @@ class SourceCodeAnalyzer:
         
         Use ALL of them as context.
         
-        == THEORETICAL CONTEXT ==
+        == THEORETICAL CONTEXT (if context available) ==
         {context}
         
         == PREVIOUS TERRAFORM-BASED ANALYSIS ({version}) ==

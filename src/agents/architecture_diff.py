@@ -32,7 +32,7 @@ class ArchitectureDiff:
         If available, you may also use the following theoretical introduction
         about software architecture, monolithic architecture, and microservices architecture:
         
-        == THEORETICAL CONTEXT ==
+        == THEORETICAL CONTEXT (if context available) ==
         {context}
         
         == ARCHITECTURE ANALYSIS - HYBRID VERSION ==

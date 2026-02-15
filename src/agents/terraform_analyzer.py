@@ -54,10 +54,10 @@ class TerraformAnalyzer:
         """Get prompt template for Terraform analysis."""
         
         return """
-        THEORETICAL CONTEXT (Markdown, for expert architects):
+        THEORETICAL CONTEXT (Markdown for expert architects, if context available):
         {context}
         
-        IAC RULE CATALOG — prioritize this evidence:
+        IAC RULE CATALOG — prioritize this evidence (if available):
         {knowledge_base}
         
         PROJECT STRUCTURE (for context):
