@@ -413,9 +413,10 @@ class ADRWorkflow:
             graph.add_edge("create_context", "analyze_source_code_major")
         
         # After validation, compare results (sequential - wait for both to complete)
-        graph.add_edge("analyze_source_code_minor", "do_architecture_diff")
-        graph.add_edge("analyze_source_code_major", "do_architecture_diff")
-        
+        # graph.add_edge("analyze_source_code_minor", "do_architecture_diff")
+        # graph.add_edge("analyze_source_code_major", "do_architecture_diff")
+        graph.add_edge(["analyze_source_code_minor", "analyze_source_code_major"], "do_architecture_diff")
+
         # Generate ADRs from comparison
         graph.add_edge("do_architecture_diff", "generate_adrs")
         
