@@ -7,8 +7,8 @@ intermediate results, outputs, and metadata needed to generate Architecture
 Decision Records (ADRs).
 
 State Structure:
-    - Inputs: terraform_minor, terraform_major, source_code_zip, knowledge_base
-    - Intermediate: architectural_context, project_structure, source_code, etc.
+    - Inputs: terraform_minor, terraform_major, source_code_zip_minor, source_code_zip_major, knowledge_base
+    - Intermediate: architectural_context, project_structure_minor/major, source_code_minor/major, etc.
     - Outputs: adr_files
     - Metadata: project_name, timestamp
 
@@ -70,13 +70,23 @@ class ADRWorkflowState(TypedDict):
     Example: "project-inputs/abelaa/abelaa_cloud_evolucion_mayor.tf"
     """
 
-    source_code_zip: Annotated[str, last_value_reducer] #str
-    # source_code_zip: Annotated[List[str], operator.add]
+    source_code_zip_minor: Annotated[str, last_value_reducer] #str
+    # source_code_zip_minor: Annotated[List[str], operator.add]
     """
-    Path to the ZIP archive containing the application source code.
-    The code is extracted and analyzed to understand the implementation details.
+    Path to the ZIP archive containing the minor evolution source code.
+    Optional - if not provided, only Terraform analysis will be used for the minor branch.
     
-    Example: "project-inputs/abelaa/abelaa_app.zip"
+    Example: "project-inputs/abelaa/abelaa_app_minor.zip"
+    """
+
+    source_code_zip_major: Annotated[str, last_value_reducer] #str
+    # source_code_zip_major: Annotated[List[str], operator.add]
+    """
+    Path to the ZIP archive containing the major evolution source code.
+    Optional - if not provided, only Terraform analysis will be used for the major branch.
+    If only one source code ZIP is configured (legacy format), it will be treated as major.
+    
+    Example: "project-inputs/abelaa/abelaa_app_major.zip"
     """
 
     knowledge_base: Annotated[str, last_value_reducer] #str
@@ -98,40 +108,80 @@ class ADRWorkflowState(TypedDict):
     Example: "The project uses a serverless architecture with AWS Lambda functions..."
     """
 
-    project_structure: Annotated[str, last_value_reducer] #str
-    # project_structure: Annotated[List[str], operator.add]
+    # Minor branch source code data
+    project_structure_minor: Annotated[str, last_value_reducer] #str
+    # project_structure_minor: Annotated[List[str], operator.add]
     """
-    Description of the project's directory structure and organization.
-    Helps understand how different components are organized and related.
+    Description of the minor evolution project's directory structure and organization.
+    Only populated if source_code_zip_minor is provided.
     
     Example: "src/\n  controllers/\n  services/\n  models/\n  utils/"
     """
 
-    source_code: Annotated[str, last_value_reducer] #str
-    # source_code: Annotated[List[str], operator.add]
+    source_code_minor: Annotated[str, last_value_reducer] #str
+    # source_code_minor: Annotated[List[str], operator.add]
     """
-    Concatenated source code content extracted from the ZIP archive.
-    Contains the actual implementation code for analysis.
+    Concatenated source code content extracted from the minor evolution ZIP archive.
+    Only populated if source_code_zip_minor is provided.
     
     Example: "import boto3\n\ndef lambda_handler(event, context):\n    ..."
     """
 
-    source_code_dict: Annotated[dict, last_value_reducer] #dict
-    # source_code_dict: Annotated[List[dict], operator.add]
+    source_code_dict_minor: Annotated[dict, last_value_reducer] #dict
+    # source_code_dict_minor: Annotated[List[dict], operator.add]
     """
-    Dictionary mapping file paths to their source code content.
+    Dictionary mapping file paths to their source code content for minor evolution.
     Preserves the original structure of extracted source files.
+    Only populated if source_code_zip_minor is provided.
     
     Example: {"src/main.py": "import boto3...", "src/utils.py": "def helper()..."}
     """
 
-    extraction_metadata: Annotated[dict, last_value_reducer] #dict
-    # extraction_metadata: Annotated[List[dict], operator.add]
+    extraction_metadata_minor: Annotated[dict, last_value_reducer] #dict
+    # extraction_metadata_minor: Annotated[List[dict], operator.add]
     """
-    Metadata about the source code extraction process, including file count,
-    file types, and extraction statistics.
+    Metadata about the minor evolution source code extraction process.
+    Only populated if source_code_zip_minor is provided.
     
-    Example: {"total_files": 15, "file_types": [".py", ".json"], "total_lines": 1234}
+    Example: {"total_files": 15, "file_types": [".py", ".json"], "branch": "minor"}
+    """
+
+    # Major branch source code data
+    project_structure_major: Annotated[str, last_value_reducer] #str
+    # project_structure_major: Annotated[List[str], operator.add]
+    """
+    Description of the major evolution project's directory structure and organization.
+    Only populated if source_code_zip_major is provided.
+    
+    Example: "src/\n  controllers/\n  services/\n  models/\n  utils/"
+    """
+
+    source_code_major: Annotated[str, last_value_reducer] #str
+    # source_code_major: Annotated[List[str], operator.add]
+    """
+    Concatenated source code content extracted from the major evolution ZIP archive.
+    Only populated if source_code_zip_major is provided.
+    
+    Example: "import boto3\n\ndef lambda_handler(event, context):\n    ..."
+    """
+
+    source_code_dict_major: Annotated[dict, last_value_reducer] #dict
+    # source_code_dict_major: Annotated[List[dict], operator.add]
+    """
+    Dictionary mapping file paths to their source code content for major evolution.
+    Preserves the original structure of extracted source files.
+    Only populated if source_code_zip_major is provided.
+    
+    Example: {"src/main.py": "import boto3...", "src/utils.py": "def helper()..."}
+    """
+
+    extraction_metadata_major: Annotated[dict, last_value_reducer] #dict
+    # extraction_metadata_major: Annotated[List[dict], operator.add]
+    """
+    Metadata about the major evolution source code extraction process.
+    Only populated if source_code_zip_major is provided.
+    
+    Example: {"total_files": 15, "file_types": [".py", ".json"], "branch": "major"}
     """
 
     terraform_analysis_minor: Annotated[str, last_value_reducer] #str
@@ -206,14 +256,6 @@ class ADRWorkflowState(TypedDict):
     and rationale.
     
     Example: ["output-adrs/abelaa_ADR_1.txt", "output-adrs/abelaa_ADR_2.txt"]
-    """
-
-    # json_collection: dict
-    """
-    Structured collection of all ADRs in JSON format for programmatic access.
-    Contains all generated ADRs with their metadata and content.
-    
-    Example: {"project_name": "abelaa", "adrs": [{"id": "ADR_1", "title": "..."}, ...]}
     """
 
     # Metadata

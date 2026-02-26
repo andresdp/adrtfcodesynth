@@ -2,32 +2,25 @@
 Context Generator Node for the ADR workflow.
 
 This node is the first step in the workflow and is responsible for:
-1. Generating theoretical architectural context (optional)
-2. Extracting project structure from source code ZIP
-3. Extracting source code content for analysis
+- Generating theoretical architectural context (optional)
 
-The node uses the ContextGenerator agent to perform the actual extraction
-and can optionally reuse pre-generated theoretical context or generate new one.
+Note: Source code extraction has been removed from this node.
+It is now handled in the source_code_analyzer_node(s).
 
 State Updates:
 - architectural_context: Theoretical context about software architecture
-- project_structure: Formatted project structure analysis
-- source_code: Concatenated source code content
-- source_code_dict: Dictionary of file paths to content
-- extraction_metadata: Statistics about the extraction
 
 Args:
-    state: ADRWorkflowState containing source_code_zip path
+    state: ADRWorkflowState (source_code_zip paths are now in state)
     llm: Optional ChatOpenAI instance (uses global if not provided)
     reuse_context: Whether to reuse pre-generated context (default: True)
     include_knowledge: Whether to include knowledge base content (default: True)
 
 Returns:
-    Updated ADRWorkflowState with extracted context
+    Updated ADRWorkflowState with architectural context
 """
 
 from state import ADRWorkflowState
-from agents.context_generator import ContextGenerator
 from config import get_project_config, get_llm_config
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -148,13 +141,17 @@ Understanding these architectural paradigms is crucial for designing software sy
 
 
 async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_context = True, include_knowledge = True) -> ADRWorkflowState:
-    """LangGraph node: Generate architectural context and extract project structure."""
+    """LangGraph node: Generate architectural context only.
+    
+    Note: Source code extraction has been removed from this node.
+    It is now handled in source_code_analyzer_minor_node and source_code_analyzer_major_node.
+    """
 
-    logger.info(f"STEP: context_generator_node")
+    logger.info("STEP: context_generator_node")
 
     llm = llm or get_llm_config().llm
     
-    # Generate architectural context only if not reusing existing context
+    # Generate architectural context only (no source code extraction)
     if not include_knowledge:
         state["architectural_context"] = ""
     elif reuse_context:
@@ -171,30 +168,6 @@ async def context_generator_node(state: ADRWorkflowState, llm = None, reuse_cont
         architectural_context = await context_chain.ainvoke({})
         state["architectural_context"] = architectural_context
 
-    # Get project configuration for context generation settings
-    project_config = get_project_config()
-    context_gen_config = project_config.get("context_generation", {})
+    # Note: Source code extraction is now done in source_code_analyzer nodes
     
-    # Extract context generation settings with defaults
-    max_files = context_gen_config.get("max_files", 10)
-    max_file_size = context_gen_config.get("max_file_size", 5000)
-    summarize_large_files = context_gen_config.get("summarize_large_files", True)
-
-    # Extract project structure and source code using ContextGenerator agent
-    context_gen = ContextGenerator(llm=llm, summarize_large_files=summarize_large_files)
-    project_context = await context_gen.generate_context(
-        state["source_code_zip"],
-        max_files=max_files,
-        max_file_size=max_file_size
-    )
-    
-    # Store extracted context in workflow state for all downstream agents
-    state["project_structure"] = project_context["project_structure"]
-    state["source_code"] = project_context["source_code"]
-    state["source_code_dict"] = project_context["source_code_dict"]
-    state["extraction_metadata"] = project_context["metadata"]
-
-    path_knowledge_base = state['knowledge_base']
-    state['knowledge_base'] = "../" +  path_knowledge_base if not path_knowledge_base.startswith("../") else path_knowledge_base
-
     return state

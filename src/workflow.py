@@ -9,11 +9,11 @@ ADR generation workflow using LangGraph. It manages:
 3. Workflow execution: Runs the workflow and returns results
 
 Workflow Steps:
-1. create_context: Generate architectural context and extract project structure
+1. create_context: Generate architectural context
 2. analyze_terraform_minor: Analyze minor version Terraform (optional)
 3. analyze_terraform_major: Analyze major version Terraform (optional)
-4. analyze_source_code_minor: Validate minor version with source code
-5. analyze_source_code_major: Validate major version with source code
+4. analyze_source_code_minor: Extract and validate minor version with source code
+5. analyze_source_code_major: Extract and validate major version with source code
 6. do_architecture_diff: Compare both architecture analyses
 7. generate_adrs: Generate ADRs from the comparison
 
@@ -163,7 +163,8 @@ class ADRWorkflow:
             - project_name: Name of the project
             - terraform_minor: Path to minor evolution Terraform file
             - terraform_major: Path to major evolution Terraform file
-            - source_code_zip: Path to source code ZIP archive
+            - source_code_zip_minor: Path to minor evolution source code ZIP
+            - source_code_zip_major: Path to major evolution source code ZIP
             - knowledge_base: Path to knowledge base file
             - timestamp: ISO 8601 timestamp of workflow creation
         """
@@ -175,17 +176,38 @@ class ADRWorkflow:
         logger.info(f"  Project Name: {self.project_config['project_name']}")
         logger.info(f"  Terraform Minor: {self.project_config['terraform_minor']}")
         logger.info(f"  Terraform Major: {self.project_config['terraform_major']}")
-        logger.info(f"  Source Code ZIP: {self.project_config['source_code_zip']}")
-        logger.info(f"  Knowledge Base: {self.project_config['knowledge_base']}")
         logger.info(f"  LLM Model: {self.project_config['llm']['model']}")
         
-        # Build initial state from project config
+        # Handle source code ZIP files - support both old and new formats
+        source_code_zip_minor = self.project_config.get("source_code_zip_minor", "")
+        source_code_zip_major = self.project_config.get("source_code_zip_major", 
+                                                      self.project_config.get("source_code_zip", ""))
+        
+        # Build base directory path
         base_dir = self.project_dir if self.project_dir.endswith("/") else self.project_dir + "/"
+        
+        # If only one ZIP file is provided (old format), treat it as major
+        if source_code_zip_major and not source_code_zip_minor:
+            logger.info("Single source code ZIP detected, treating as major branch")
+            source_code_zip_major = base_dir + source_code_zip_major
+            logger.info(f"  Source Code Major: {source_code_zip_major}")
+        else:
+            if source_code_zip_minor:
+                source_code_zip_minor = base_dir + source_code_zip_minor
+                logger.info(f"  Source Code Minor: {source_code_zip_minor}")
+            if source_code_zip_major:
+                source_code_zip_major = base_dir + source_code_zip_major
+                logger.info(f"  Source Code Major: {source_code_zip_major}")
+        
+        logger.info(f"  Knowledge Base: {self.project_config['knowledge_base']}")
+        
+        # Build initial state from project config
         self.initial_state = {
             "project_name": self.project_config.get("project_name", "default"),
             "terraform_minor": base_dir + self.project_config.get("terraform_minor", ""),
             "terraform_major": base_dir + self.project_config.get("terraform_major", ""),
-            "source_code_zip": base_dir + self.project_config.get("source_code_zip", ""),
+            "source_code_zip_minor": source_code_zip_minor,
+            "source_code_zip_major": source_code_zip_major,
             "knowledge_base": self.project_config.get("knowledge_base", "knowledge/IAC.txt"),
             "timestamp": datetime.now().isoformat()
         }
@@ -248,12 +270,10 @@ class ADRWorkflow:
 
     async def _create_context(self, state: ADRWorkflowState, config: RunnableConfig) -> ADRWorkflowState:
         """
-        LangGraph node: Create architectural context and extract project structure.
+        LangGraph node: Create architectural context.
         
-        This is the first node in the workflow that:
-        1. Generates theoretical architectural context
-        2. Extracts project structure from source code ZIP
-        3. Stores results in the workflow state
+        This is the first node in the workflow that generates theoretical context.
+        Source code extraction is now handled in source_code_analyzer nodes.
         
         Args:
             state: Current workflow state
@@ -296,9 +316,9 @@ class ADRWorkflow:
     
     async def _analyze_source_code_minor(self, state: ADRWorkflowState, config: RunnableConfig) -> ADRWorkflowState:
         """
-        LangGraph node: Validate and improve minor version analysis with source code.
+        LangGraph node: Extract and validate minor version analysis with source code.
         
-        Uses actual source code to validate and enhance the Terraform analysis.
+        Extracts source code from ZIP (if available) and validates Terraform analysis.
         
         Args:
             state: Current workflow state with terraform_analysis_minor
@@ -311,9 +331,9 @@ class ADRWorkflow:
     
     async def _analyze_source_code_major(self, state: ADRWorkflowState, config: RunnableConfig) -> ADRWorkflowState:
         """
-        LangGraph node: Validate and improve major version analysis with source code.
+        LangGraph node: Extract and validate major version analysis with source code.
         
-        Uses actual source code to validate and enhance the Terraform analysis.
+        Extracts source code from ZIP (if available) and validates Terraform analysis.
         
         Args:
             state: Current workflow state with terraform_analysis_major
@@ -414,7 +434,7 @@ class ADRWorkflow:
         
         # After validation, compare results (sequential - wait for both to complete)
         # graph.add_edge("analyze_source_code_minor", "do_architecture_diff")
-        # graph.add_edge("analyze_source_code_major", "do_architecture_diff")
+        # graph.add_edge("analyze_source_code_major", "do_architecture_diff")
         graph.add_edge(["analyze_source_code_minor", "analyze_source_code_major"], "do_architecture_diff")
 
         # Generate ADRs from comparison
@@ -458,6 +478,3 @@ class ADRWorkflow:
         result = await graph.ainvoke(initial_state, config=config)
         
         return result
-
-
-
