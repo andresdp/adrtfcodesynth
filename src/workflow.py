@@ -44,7 +44,10 @@ from IPython.display import Image
 from langgraph.graph import StateGraph, END
 from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
+from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from state import ADRWorkflowState
 from config import initialize_llm, load_project_config, get_project_config
@@ -85,7 +88,7 @@ class ADRWorkflow:
         >>> print(result["adr_files"])
     """
 
-    def __init__(self, project_dir: str=None, llm: ChatOpenAI = None):
+    def __init__(self, project_dir: str=None, llm: BaseLanguageModel = None):
         """
         Initialize the ADRWorkflow.
         
